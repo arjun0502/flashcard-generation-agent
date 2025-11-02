@@ -8,8 +8,23 @@ Generate Anki flashcards from PDF documents using OpenAI's API with automatic cr
 - 🤖 AI-powered flashcard generation using GPT-4o
 - 🔍 Automatic critique based on pedagogical principles
 - ✏️ Iterative revision for quality improvement
+- 🎯 Interactive study session with adaptive learning
+- 📊 Knowledge gap analysis and personalized deck creation
 - 📦 Export to Anki (.apkg format)
 - 💾 Also exports as text file (Question|Answer format)
+- 📝 Detailed logging of generation and study session
+
+## Project Structure
+
+```
+flashcard-generator/
+├── main.py              # Main application
+├── requirements.txt     # Python dependencies
+├── .env                 # API keys (create this)
+├── lecture_notes.pdf    # Your input PDF
+├── output.apkg          # Generated Anki deck
+└── flashcards.txt       # Text format output
+```
 
 ## Setup
 
@@ -73,6 +88,9 @@ python main.py lecture_notes.pdf --iterations 3
 
 # Keep uploaded file on OpenAI servers
 python main.py lecture_notes.pdf --keep-file
+
+# Interactive study session with adaptive learning
+python main.py lecture_notes.pdf --study-session
 ```
 
 ### Command Line Options
@@ -83,6 +101,7 @@ python main.py lecture_notes.pdf --keep-file
 - `--iterations` - Maximum number of critique/revision iterations (default: 2)
 - `--verbose` - Enable verbose logging with all flashcards shown in log
 - `--keep-file` - Keep uploaded file on OpenAI servers (default: delete after use)
+- `--study-session` - Enable interactive study session with adaptive learning
 
 ## Output Files
 
@@ -91,6 +110,7 @@ After running, you'll get:
 - `output.apkg` - Anki package file (import into Anki)
 - `flashcards.txt` - Text format with Question|Answer pairs
 - `logs/flashcard_generation_TIMESTAMP.log` - Detailed log of the generation process including critiques and revisions
+- `knowledge_gaps_report.txt` - Gap analysis report (only when using `--study-session`)
 
 ## Import into Anki
 
@@ -112,6 +132,70 @@ After running, you'll get:
 4. **Revision**: If issues found, revises flashcards (up to 2 iterations)
 5. **Export**: Creates Anki package with all flashcards
 6. **Cleanup**: Deletes uploaded file (unless `--keep-file` is used)
+
+## Interactive Study Session (Optional)
+
+When using `--study-session`, you can interactively rate flashcards and get a personalized adaptive deck:
+
+1. **Study Session**: Rate each flashcard on difficulty (1-5)
+2. **Gap Analysis**: AI identifies what you know well, weak areas, and critical gaps
+3. **Adaptive Deck**: 
+   - Removes cards you've mastered (rated 1)
+   - Adds targeted gap-filling cards for concepts you struggled with
+   - Creates personalized deck based on your knowledge level
+
+### Example Study Session Flow
+
+```
+Would you like to start a study session? (y/n): y
+
+============================================================
+STUDY SESSION
+============================================================
+
+Flashcard 1 of 15
+────────────────────────────────────────────────────────────
+
+QUESTION:
+What is the intuition behind node embeddings?
+
+[Press Enter to see answer]
+
+ANSWER:
+Map nodes to d-dimensional embeddings so that similar 
+nodes are embedded close together.
+
+Enter difficulty rating (1-5): 2
+
+[Continues through all flashcards...]
+
+============================================================
+STUDY SESSION COMPLETE
+============================================================
+
+Analyzing your knowledge gaps...
+
+============================================================
+KNOWLEDGE GAPS IDENTIFIED
+============================================================
+
+Your Strong Areas:
+✓ Node embeddings basics
+✓ Graph Neural Network fundamentals
+
+Areas Needing Improvement:
+⚠ Graph Convolutional Networks mechanics
+
+Critical Gap Found:
+🔴 Inductive capabilities (rated 5/5)
+
+DECK CHANGES
+────────────────────────────────────────────────────────────
+Original cards: 15
+Cards removed (mastered): 3
+Cards added (gap-filling): 5
+Final cards: 17
+```
 
 ## genanki Best Practices (from README)
 
@@ -205,69 +289,7 @@ All generation runs are automatically logged to timestamped files in the `logs/`
 ```
 
 Use `--verbose` to see all the intermediate flashcards and detailed critique feedback.
-
-## Troubleshooting
-
-### "No module named 'openai'"
-```bash
-pip install -r requirements.txt
 ```
-
-### "OPENAI_API_KEY not found"
-- Ensure `.env` file exists in project root
-- Check that API key is correct
-- Make sure python-dotenv is installed
-
-### "File too large" error
-- PDFs are limited to 100 pages and 32MB
-- Try splitting the PDF into smaller sections
-
-### Flashcards not appearing in Anki
-- Make sure you imported the `.apkg` file correctly
-- Check that the deck name matches what you specified
-- Try restarting Anki
-
-## Customization
-
-### Change critique criteria
-
-Edit the critique prompt in `critique_flashcards()`:
-```python
-content = """Evaluate flashcards against these pedagogical principles:
-1. Your custom criteria here
-2. Another criterion
-...
-```
-
-### Adjust revision iterations
-
-Change `max_iterations` parameter:
-```python
-create_flashcards(file_path, deck_name, max_iterations=3)  # Default is 2
-```
-
-### Use different OpenAI model
-
-Change the model in API calls:
-```python
-model="gpt-4o-mini"  # Cheaper, faster, slightly lower quality
-```
-
-## Project Structure
-
-```
-flashcard-generator/
-├── main.py              # Main application
-├── requirements.txt     # Python dependencies
-├── .env                 # API keys (create this)
-├── lecture_notes.pdf    # Your input PDF
-├── output.apkg          # Generated Anki deck
-└── flashcards.txt       # Text format output
-```
-
-## License
-
-MIT License - feel free to modify and use for your own purposes.
 
 ## Acknowledgments
 
