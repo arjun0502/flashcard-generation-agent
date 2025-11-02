@@ -1,0 +1,14 @@
+# Python
+flashcard_generation_venv/
+
+# Logs
+logs/
+*.log
+
+# Output files
+output.apkg
+flashcards.txt
+
+# PDF files (optional - uncomment if you don't want to track PDFs)
+*.pdf
+
