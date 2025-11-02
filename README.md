@@ -39,13 +39,15 @@ pip install -r requirements.txt
 
 ### 4. Set up OpenAI API key
 
-Create a `.env` file in the project root:
-
-```
-OPENAI_API_KEY=your-api-key-here
-```
-
 Get your API key from: https://platform.openai.com/api-keys
+
+```bash
+# Linux
+export OPENAI_API_KEY='your-api-key-here'
+
+# Windows (Powershell)
+$env:OPENAI_API_KEY="your-api-key-here"
+```
 
 ### 5. Add your PDF file
 
