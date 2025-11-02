@@ -1,37 +1,93 @@
-# AI Flashcard Generator
+# Flashcard Generation Agent
 
-Generate Anki flashcards from PDF documents using OpenAI's API with automatic critique and revision.
+The Flashcard Generation Agent automatically generates flashcards from lecture materials, critiques and revises it based on pedagogical principles for long-term learning, and personalizes flashcards based on your knowledge gaps. 
 
-## Features
+## User Workflow
 
-- 📄 Upload PDF lecture notes, slides, or transcripts
-- 🤖 AI-powered flashcard generation using GPT-4o
-- 🔍 Automatic critique based on pedagogical principles
-- ✏️ Iterative revision for quality improvement
-- 🎯 Interactive study session with adaptive learning
-- 📊 Knowledge gap analysis and personalized deck creation
-- 📦 Export to Anki (.apkg format)
-- 💾 Also exports as text file (Question|Answer format)
-- 📝 Detailed logging of generation and study session
+1. **Provide Lecture Materials**: You provide a PDF of your lecture notes, slides, or study materials
+2. **Automatic Flashcard Generation**: The agent analyzes your materials and automatically generates flashcards covering key concepts
+3. **Quality Improvement**: The agent critiques the flashcards to ensure they follow best practices for effective learning (one concept per card, clear questions, appropriate difficulty) and revises them accordingly
+4. **Optional Personalization**: You optionally engage in an interactive study session where you rate your familiarity with each flashcard. Based on your responses, the agent identifies what you know well, areas needing improvement, and critical knowledge gaps. It then adapts the deck by removing cards you've mastered and adding targeted flashcards to fill your knowledge gaps
+5. **Ready-to-Study Flashcards**: The agent provides you with a complete flashcard deck ready for import into your study tools
 
-## Project Structure
 
+## Technical Design
+
+The agent is built on a series of OpenAI API calls that handle different aspects of flashcard generation, quality improvement, and personalization.
+
+### OpenAI API Integration
+
+The agent provides PDFs as inputs to the OpenAI API, which requires models that support both text and image inputs. This works with models such as `gpt-4o`, `gpt-4o-mini`, or `o1`. PDFs are uploaded via OpenAI's Files API, which processes the document's text and images for analysis.
+
+The core functionality is implemented through separate OpenAI API calls:
+
+- **Flashcard Generation**: Initial flashcard creation from the PDF content
+- **Critique**: Evaluation of flashcard quality against pedagogical principles (atomicity, clarity, appropriate difficulty, avoiding yes/no questions, ensuring context)
+- **Revision**: Iterative improvement of flashcards based on critique feedback (default: up to 2 iterations)
+- **Knowledge Gap Analysis**: Analysis of study session ratings to identify learning gaps and generate targeted gap-filling cards
+
+All API calls use OpenAI's structured outputs feature with Pydantic models to ensure consistent response formatting.
+
+### Pydantic
+
+The project uses Pydantic models for structured data validation and OpenAI's structured outputs:
+
+- **Flashcard**: Single flashcard with question and answer fields
+- **FlashcardSet**: Collection of flashcards
+- **Critique**: AI evaluation of flashcard quality (is_acceptable, feedback, issues list)
+- **StudyRating**: User difficulty rating for a flashcard (1-5 scale)
+- **StudySession**: Complete study session results (flashcards + ratings)
+- **KnowledgeGaps**: AI analysis of student performance with strong areas, weak areas, critical gaps, and recommendations
+- **AdaptiveUpdate**: Final result of adaptive learning updates
+
+These models enable type-safe data handling and ensure OpenAI API responses conform to expected schemas using `to_strict_json_schema()` for structured outputs.
+
+### genanki
+
+genanki is a Python 3 library for generating Anki decks programmatically. The agent uses genanki to create `.apkg` package files that can be imported directly into Anki.
+
+Key implementation details:
+
+- **Hardcoded IDs**: Model ID (`FLASHCARD_MODEL_ID`) and deck ID (`FLASHCARD_DECK_ID`) are hardcoded constants rather than randomly generated. This ensures that re-imports update the existing deck rather than creating duplicates.
+
+- **HTML Escaping**: All flashcard field content is HTML-escaped using `html.escape()` before adding to genanki Notes. This is required because genanki fields are HTML, and special characters like `<`, `>`, and `&` must be escaped to display properly.
+
+- **Consistent Model Definition**: The Anki model (note type) is defined once at module level in `config.py` and reused across all exports, ensuring consistent card formatting.
+
+The model uses a simple two-field template (Question/Answer) with a horizontal rule separator in the answer template.
+
+### Interactive Study Session / CLI
+
+The interactive study session (`study_session.py`) provides a command-line interface where users can rate flashcards during their study session. The CLI:
+
+- Displays flashcards one at a time with questions and answers
+- Collects difficulty ratings (1-5 scale) from the user
+- Packages the ratings into a `StudySession` object for analysis
+
+When combined with knowledge gap analysis, this enables adaptive learning where the agent modifies the deck based on user performance. The main application (`main.py`) orchestrates the entire workflow through command-line argument parsing, coordinating between OpenAI API calls, study session collection, and deck export.
+
+## Codebase Structure
 ```
-flashcard-generator/
-├── main.py              # Main application
+flashcard-generation-agent/
+├── main.py              # Main application entry point - orchestrates workflow, CLI handling
+├── models.py            # Pydantic models for flashcard data structures (Flashcard, FlashcardSet, Critique, StudySession, KnowledgeGaps, etc.)
+├── openai_client.py     # OpenAI API interactions - PDF upload, flashcard generation, critique, knowledge gap analysis
+├── study_session.py     # Interactive study session and adaptive learning functionality
+├── anki_exporter.py     # Anki deck export functionality (.apkg generation and text format export)
+├── config.py            # Configuration constants - OpenAI client, genanki model/deck IDs, logging setup
 ├── requirements.txt     # Python dependencies
-├── .env                 # API keys (create this)
-├── lecture_notes.pdf    # Your input PDF
-├── output.apkg          # Generated Anki deck
-└── flashcards.txt       # Text format output
+├── logs/                # Timestamped log files for each generation run
+├── output.apkg          # Generated Anki deck (created on run)
+└── flashcards.txt       # Text format output (created on run)
 ```
 
 ## Setup
 
-### 1. Clone or create project directory
+### 1. Clone GitHub repo
 
 ```bash
-cd flashcard-generator
+git clone https://github.com/arjun0502/flashcard-generation-agent.git
+cd flashcard-generation-agent
 ```
 
 ### 2. Create virtual environment (recommended)
@@ -68,7 +124,7 @@ $env:OPENAI_API_KEY="your-api-key-here"
 
 Place your PDF file in the project directory (e.g., `lecture_notes.pdf`)
 
-## Usage
+## How to Run Agent
 
 ```bash
 # Basic usage
@@ -103,7 +159,7 @@ python main.py lecture_notes.pdf --study-session
 - `--keep-file` - Keep uploaded file on OpenAI servers (default: delete after use)
 - `--study-session` - Enable interactive study session with adaptive learning
 
-## Output Files
+### Output Files
 
 After running, you'll get:
 
@@ -112,28 +168,23 @@ After running, you'll get:
 - `logs/flashcard_generation_TIMESTAMP.log` - Detailed log of the generation process including critiques and revisions
 - `knowledge_gaps_report.txt` - Gap analysis report (only when using `--study-session`)
 
-## Import into Anki
+### Import into Anki
 
 1. Open Anki desktop application
 2. File → Import
 3. Select `output.apkg`
 4. Your flashcards will appear in the specified deck!
 
-## How It Works
+### Cost Estimation
 
-1. **PDF Upload**: Uploads PDF to OpenAI's Files API and gets a file ID
-2. **Generation**: GPT-4o extracts key concepts and creates flashcards
-3. **Critique**: Evaluates flashcards against pedagogical principles:
-   - Atomicity (one concept per card)
-   - Clarity (unambiguous questions/answers)
-   - Appropriate difficulty
-   - No yes/no questions
-   - Necessary context included
-4. **Revision**: If issues found, revises flashcards (up to 2 iterations)
-5. **Export**: Creates Anki package with all flashcards
-6. **Cleanup**: Deletes uploaded file (unless `--keep-file` is used)
+Typical costs per PDF (using GPT-4o):
+- Small PDF (10 pages): ~$0.05-0.15
+- Medium PDF (30 pages): ~$0.15-0.40
+- Large PDF (100 pages): ~$0.50-1.50
 
-## Interactive Study Session (Optional)
+Note: PDFs with many images cost more due to vision processing.
+
+## Interactive Study Session
 
 When using `--study-session`, you can interactively rate flashcards and get a personalized adaptive deck:
 
@@ -197,99 +248,9 @@ Cards added (gap-filling): 5
 Final cards: 17
 ```
 
-## genanki Best Practices (from README)
-
-This implementation follows genanki's official guidelines:
-
-### 1. Hardcoded IDs
-
-**✅ Correct (what we do):**
-```python
-FLASHCARD_MODEL_ID = 1607392319  # Generated once, hardcoded
-FLASHCARD_DECK_ID = 2059400110   # Generated once, hardcoded
-
-deck = genanki.Deck(FLASHCARD_DECK_ID, deck_name)
-```
-
-**❌ Incorrect (what NOT to do):**
-```python
-deck_id = random.randrange(1 << 30, 1 << 31)  # DON'T generate each time!
-deck = genanki.Deck(deck_id, deck_name)
-```
-
-**Why?** Stable IDs allow Anki to track your model/deck across re-imports. Without stable IDs, each import creates a new deck instead of updating the existing one.
-
-### 2. HTML Escaping
-
-**✅ Correct (what we do):**
-```python
-question_escaped = html.escape(fc.question)
-answer_escaped = html.escape(fc.answer)
-note = genanki.Note(model=FLASHCARD_MODEL, fields=[question_escaped, answer_escaped])
-```
-
-**Why?** Field content is HTML, not plain text. Special characters like `<`, `>`, and `&` need to be escaped to display properly.
-
-### 3. Model Definition
-
-Our model is defined once at the module level and reused:
-```python
-FLASHCARD_MODEL = genanki.Model(
-    FLASHCARD_MODEL_ID,
-    'AI Generated Flashcard Model',
-    fields=[
-        {'name': 'Question'},
-        {'name': 'Answer'},
-    ],
-    templates=[
-        {
-            'name': 'Card 1',
-            'qfmt': '{{Question}}',
-            'afmt': '{{FrontSide}}<hr id="answer">{{Answer}}',
-        },
-    ])
-```
-
-## Cost Estimation
-
-Typical costs per PDF (using GPT-4o):
-- Small PDF (10 pages): ~$0.05-0.15
-- Medium PDF (30 pages): ~$0.15-0.40
-- Large PDF (100 pages): ~$0.50-1.50
-
-Note: PDFs with many images cost more due to vision processing.
-
 ## Logging
 
-All generation runs are automatically logged to timestamped files in the `logs/` directory.
-
-### Log Levels
-
-**INFO (default):** Shows workflow steps, critiques, and issue summaries
-- When generation starts/completes
-- Number of flashcards generated/revised
-- Critique feedback and issues found
-- Log file location
-
-**DEBUG (--verbose flag):** Includes everything above plus:
-- Complete Q&A text for all flashcards (initial and revised)
-- Full conversation flow
-
-### Example Log Output
-
-```
-2025-01-XX XX:XX:XX - INFO - Starting flashcard generation for: lecture.pdf
-2025-01-XX XX:XX:XX - INFO - Using model: gpt-4o, max_iterations: 2
-2025-01-XX XX:XX:XX - INFO - Generated 15 initial flashcards
-2025-01-XX XX:XX:XX - INFO - Iteration 1/2
-2025-01-XX XX:XX:XX - WARNING - Issues found: Yes/No questions, Missing context
-2025-01-XX XX:XX:XX - INFO - Critique feedback: Several flashcards use yes/no format...
-2025-01-XX XX:XX:XX - INFO - Revised to 15 flashcards
-2025-01-XX XX:XX:XX - INFO - Completed! Created 15 flashcards
-```
-
-Use `--verbose` to see all the intermediate flashcards and detailed critique feedback.
-```
+All generation runs are automatically logged to timestamped files in the `logs/` directory using Python's `logging` module. The default log level is `INFO`, which shows workflow steps, critiques, and issue summaries. Use the `--verbose` flag to enable `DEBUG` level logging, which includes complete Q&A text for all flashcards and full conversation flow.
 
 ## Acknowledgments
 
