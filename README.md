@@ -4,26 +4,24 @@ The Flashcard Generation Agent automatically generates flashcards from lecture m
 
 ## User Workflow
 
-1. **Provide Lecture Materials**: You provide a PDF of your lecture notes, slides, or study materials
-2. **Automatic Flashcard Generation**: The agent analyzes your materials and automatically generates flashcards covering key concepts
-3. **Quality Improvement**: The agent critiques the flashcards to ensure they follow best practices for effective learning (one concept per card, clear questions, appropriate difficulty) and revises them accordingly
-4. **Optional Personalization**: You optionally engage in an interactive study session where you rate your familiarity with each flashcard. Based on your responses, the agent identifies what you know well, areas needing improvement, and critical knowledge gaps. It then adapts the deck by removing cards you've mastered and adding targeted flashcards to fill your knowledge gaps
-5. **Ready-to-Study Flashcards**: The agent provides you with a complete flashcard deck ready for import into your study tools
+1. **Provide Lecture Materials**: The user provide a PDF of your lecture notes, slides, or study materials
+2. **Automatic Flashcard Generation**: The agent analyzes the lecture materials and automatically generates flashcards covering key concepts
+3. **Quality Improvement**: The agent critiques the flashcards based on pedagogical principles for effective learning and then revises them accordingly
+4. **Optional Personalization**: The user optionally engages in an interactive study session and, as part of this study session, they will rate the difficulty of each flashcard. Based on the user ratings, the agent identifies what the user knows well, areas needing improvement, and critical knowledge gaps. It then adapts the deck by removing cards the user mastered and adding targeted flashcards to fill the user's knowledge gaps
+5. **Ready-to-Study Flashcards**: The agent provides the user with a complete flashcard deck ready for import into your study tools
 
 
 ## Technical Design
 
-The agent is built on a series of OpenAI API calls that handle different aspects of flashcard generation, quality improvement, and personalization.
-
 ### OpenAI API Integration
 
-The agent provides PDFs as inputs to the OpenAI API, which requires models that support both text and image inputs. This works with models such as `gpt-4o`, `gpt-4o-mini`, or `o1`. PDFs are uploaded via OpenAI's Files API, which processes the document's text and images for analysis.
-
-The core functionality is implemented through separate OpenAI API calls:
+The agent is built on a series of OpenAI API calls that handle different aspects of flashcard generation, quality 
+improvement, and personalization. OpenAI API supports PDF file inputs if you use models with vision capabilities such as 
+`gpt-4o`, `gpt-4o-mini`, or `o1`. 
 
 - **Flashcard Generation**: Initial flashcard creation from the PDF content
-- **Critique**: Evaluation of flashcard quality against pedagogical principles (atomicity, clarity, appropriate difficulty, avoiding yes/no questions, ensuring context)
-- **Revision**: Iterative improvement of flashcards based on critique feedback (default: up to 2 iterations)
+- **Critique**: Evaluation of flashcard quality against pedagogical principles for long-term learning (atomicity, clarity, appropriate difficulty, avoiding yes/no questions, ensuring context)
+- **Revision**: Improvement of flashcards based on pedagogical feedback
 - **Knowledge Gap Analysis**: Analysis of study session ratings to identify learning gaps and generate targeted gap-filling cards
 
 All API calls use OpenAI's structured outputs feature with Pydantic models to ensure consistent response formatting.
@@ -56,17 +54,10 @@ Key implementation details:
 
 The model uses a simple two-field template (Question/Answer) with a horizontal rule separator in the answer template.
 
-### Interactive Study Session / CLI
+### Modular Codebase
 
-The interactive study session (`study_session.py`) provides a command-line interface where users can rate flashcards during their study session. The CLI:
+The codebase follows a modular design:
 
-- Displays flashcards one at a time with questions and answers
-- Collects difficulty ratings (1-5 scale) from the user
-- Packages the ratings into a `StudySession` object for analysis
-
-When combined with knowledge gap analysis, this enables adaptive learning where the agent modifies the deck based on user performance. The main application (`main.py`) orchestrates the entire workflow through command-line argument parsing, coordinating between OpenAI API calls, study session collection, and deck export.
-
-## Codebase Structure
 ```
 flashcard-generation-agent/
 ├── main.py              # Main application entry point - orchestrates workflow, CLI handling
@@ -75,11 +66,12 @@ flashcard-generation-agent/
 ├── study_session.py     # Interactive study session and adaptive learning functionality
 ├── anki_exporter.py     # Anki deck export functionality (.apkg generation and text format export)
 ├── config.py            # Configuration constants - OpenAI client, genanki model/deck IDs, logging setup
-├── requirements.txt     # Python dependencies
+├── requirements.txt     # Python dependencies (includes streamlit, plotly, pandas)
 ├── logs/                # Timestamped log files for each generation run
 ├── output.apkg          # Generated Anki deck (created on run)
 └── flashcards.txt       # Text format output (created on run)
 ```
+The main application (`main.py`) is the entry point for the agent and orchestrates the full workflow. All core functionality is implemented in other modular files listed above. 
 
 ## Setup
 
@@ -90,7 +82,7 @@ git clone https://github.com/arjun0502/flashcard-generation-agent.git
 cd flashcard-generation-agent
 ```
 
-### 2. Create virtual environment (recommended)
+### 2. Create virtual environment 
 
 ```bash
 python -m venv venv
@@ -126,6 +118,8 @@ Place your PDF file in the project directory (e.g., `lecture_notes.pdf`)
 
 ## How to Run Agent
 
+### Command Line Interface (CLI)
+
 ```bash
 # Basic usage
 python main.py lecture_notes.pdf
@@ -133,17 +127,11 @@ python main.py lecture_notes.pdf
 # With custom deck name
 python main.py lecture_notes.pdf --deck "Biology 101 - Cell Structure"
 
-# With verbose logging (includes all flashcards in log)
-python main.py lecture_notes.pdf --verbose
-
 # Use a cheaper/faster model
 python main.py lecture_notes.pdf --model gpt-4o-mini
 
 # Customize number of iterations
 python main.py lecture_notes.pdf --iterations 3
-
-# Keep uploaded file on OpenAI servers
-python main.py lecture_notes.pdf --keep-file
 
 # Interactive study session with adaptive learning
 python main.py lecture_notes.pdf --study-session
@@ -186,10 +174,17 @@ Note: PDFs with many images cost more due to vision processing.
 
 ## Interactive Study Session
 
-When using `--study-session`, you can interactively rate flashcards and get a personalized adaptive deck:
+The interactive study session provides a command-line interface where users can rate flashcards during their study session and get personalized adaptive decks. When using `--study-session`, you can:
 
 1. **Study Session**: Rate each flashcard on difficulty (1-5)
+   - The CLI displays flashcards one at a time with questions and answers
+   - Collects difficulty ratings (1-5 scale) from the user
+   - Packages the ratings into a `StudySession` object for analysis
+
 2. **Gap Analysis**: AI identifies what you know well, weak areas, and critical gaps
+   - When combined with knowledge gap analysis, this enables adaptive learning where the agent modifies the deck based on user performance
+   - Uses `analyze_knowledge_gaps()` from `openai_client.py` to analyze performance
+
 3. **Adaptive Deck**: 
    - Removes cards you've mastered (rated 1)
    - Adds targeted gap-filling cards for concepts you struggled with

@@ -1,3 +1,6 @@
 openai
 pydantic
 genanki
+streamlit
+plotly
+pandas
