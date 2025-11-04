@@ -77,7 +77,8 @@ def adaptive_update_flashcards(
     original: FlashcardSet,
     session: StudySession,
     gaps: KnowledgeGaps,
-    file_id: str,
+    file_id: str | None = None,
+    text_content: str | None = None,
     model: str = "gpt-4o"
 ) -> AdaptiveUpdate:
     """Apply adaptive updates: remove mastered cards, add gap-filling cards"""
@@ -99,7 +100,7 @@ def adaptive_update_flashcards(
     logging.info(f"Keeping {len(kept_cards)} cards that need practice")
     
     # Generate new cards for gaps
-    new_cards = generate_gap_filling_cards(gaps, file_id, model)
+    new_cards = generate_gap_filling_cards(gaps, file_id=file_id, text_content=text_content, model=model)
     logging.info(f"Generated {len(new_cards)} new gap-filling cards")
     
     # Combine kept + new cards

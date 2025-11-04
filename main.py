@@ -14,7 +14,7 @@ from models import FlashcardSet
 
 # Import functions from modular files
 from openai_client import (
-    upload_pdf,
+    prepare_input,
     generate_flashcards,
     critique_flashcards,
     revise_flashcards,
@@ -56,14 +56,14 @@ def create_flashcards(
     enable_study_session: bool = False
 ):
     """
-    Main workflow for creating flashcards from a PDF file.
+    Main workflow for creating flashcards from a PDF or text file.
     
     Args:
-        file_path: Path to the PDF file
+        file_path: Path to the PDF or text file
         deck_name: Name for the Anki deck
         model: OpenAI model to use
         max_iterations: Maximum critique/revision iterations
-        keep_file: Whether to keep uploaded file on OpenAI servers
+        keep_file: Whether to keep uploaded file on OpenAI servers (only for PDFs)
         enable_study_session: Whether to enable interactive study session
     """
     print(f"\n{'='*60}")
@@ -76,10 +76,11 @@ def create_flashcards(
     logging.info(f"Using model: {model}, max_iterations: {max_iterations}")
     
     file_id = None
+    text_content = None
     try:
-        # Generate initial flashcards
-        file_id = upload_pdf(file_path)
-        flashcards = generate_flashcards(file_id, model)
+        # Prepare input (upload PDF or read text file)
+        file_id, text_content = prepare_input(file_path)
+        flashcards = generate_flashcards(file_id=file_id, text_content=text_content, model=model)
         
         print(f"✓ Generated {len(flashcards.flashcards)} flashcards\n")
         logging.info(f"Generated {len(flashcards.flashcards)} initial flashcards")
@@ -147,12 +148,12 @@ def create_flashcards(
                 logging.info(f"Study session completed: {len(session.ratings)} ratings collected")
                 
                 # Analyze gaps
-                gaps = analyze_knowledge_gaps(session, file_id, model)
+                gaps = analyze_knowledge_gaps(session, file_id=file_id, text_content=text_content, model=model)
                 logging.info(f"Knowledge gaps analyzed: {len(gaps.weak_areas)} weak areas identified")
                 
                 # Adaptive update
                 adaptive_result = adaptive_update_flashcards(
-                    original_flashcards, session, gaps, file_id, model
+                    original_flashcards, session, gaps, file_id, text_content, model
                 )
                 
                 # Export adaptive deck
@@ -200,21 +201,22 @@ def create_flashcards(
 # CLI entry point
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Generate Anki flashcards from PDF documents using AI",
+        description="Generate Anki flashcards from PDF or text documents using AI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python main.py lecture_notes.pdf
+  python main.py lecture_notes.txt
   python main.py lecture_notes.pdf --deck "Biology 101"
-  python main.py lecture_notes.pdf --model gpt-4o-mini --iterations 3
+  python main.py transcript.txt --model gpt-4o-mini --iterations 3
   python main.py lecture_notes.pdf --verbose
   python main.py 03-GNN1.pdf --deck "Graph Neural Networks" --model gpt-4o --iterations 1
         """
     )
     
     parser.add_argument(
-        "pdf_file",
-        help="Path to the PDF file to generate flashcards from"
+        "input_file",
+        help="Path to the PDF or text file (.pdf, .txt, .text) to generate flashcards from"
     )
     
     parser.add_argument(
@@ -262,15 +264,15 @@ Examples:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.info("Verbose mode enabled - all flashcards will be logged")
     
-    if not os.path.exists(args.pdf_file):
-        print(f"Error: File not found: {args.pdf_file}")
-        logging.error(f"File not found: {args.pdf_file}")
+    if not os.path.exists(args.input_file):
+        print(f"Error: File not found: {args.input_file}")
+        logging.error(f"File not found: {args.input_file}")
         exit(1)
     
     print(f"Log file: {log_file}")
     
     create_flashcards(
-        args.pdf_file,
+        args.input_file,
         args.deck,
         args.model,
         args.iterations,

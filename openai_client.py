@@ -28,6 +28,33 @@ def upload_pdf(file_path: str) -> str:
     return uploaded_file.id
 
 
+def prepare_input(file_path: str) -> tuple[str | None, str | None]:
+    """
+    Prepare input file for processing. Returns (file_id, text_content).
+    For PDFs: returns (file_id, None)
+    For text files: returns (None, text_content)
+    """
+    file_path_obj = Path(file_path)
+    if not file_path_obj.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    suffix = file_path_obj.suffix.lower()
+    
+    if suffix == '.pdf':
+        # Upload PDF and return file_id
+        file_id = upload_pdf(file_path)
+        return (file_id, None)
+    elif suffix in ['.txt', '.text']:
+        # Read text file content
+        print(f"Reading text file: {file_path_obj.name}...")
+        with open(file_path, "r", encoding="utf-8") as f:
+            text_content = f.read()
+        print(f"Text file read successfully ({len(text_content)} characters)")
+        return (None, text_content)
+    else:
+        raise ValueError(f"Unsupported file type: {suffix}. Supported types: .pdf, .txt, .text")
+
+
 def cleanup_file(file_id: str) -> None:
     """Delete the uploaded file to avoid storage costs."""
     import logging
@@ -40,15 +67,32 @@ def cleanup_file(file_id: str) -> None:
         logging.error(f"Error deleting file {file_id}: {e}")
 
 
-def generate_flashcards(file_id: str, model: str = "gpt-4o") -> FlashcardSet:
-    """Generate flashcards using uploaded file ID."""
+def generate_flashcards(file_id: str | None = None, text_content: str | None = None, model: str = "gpt-4o") -> FlashcardSet:
+    """
+    Generate flashcards using either an uploaded file ID (for PDFs) or text content (for text files).
+    Must provide exactly one of file_id or text_content.
+    """
+    if (file_id is None) == (text_content is None):
+        raise ValueError("Must provide exactly one of file_id or text_content")
+    
     print(f"Calling OpenAI API ({model}) to generate flashcards...")
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
+    
+    # Build user content based on input type
+    if file_id:
+        # PDF file - use file attachment
+        user_content = [
             {
-                "role": "system",
-                "content": """You are an expert at creating effective flashcards for spaced repetition learning.
+                "type": "file",
+                "file": {
+                    "file_id": file_id
+                }
+            },
+            {
+                "type": "text",
+                "text": "Generate comprehensive flashcards from this document. Include information from any diagrams, charts, or images."
+            }
+        ]
+        system_content = """You are an expert at creating effective flashcards for spaced repetition learning.
                 Create flashcards that:
                 - Focus on atomic concepts (one concept per card)
                 - Use clear, concise questions
@@ -56,21 +100,32 @@ def generate_flashcards(file_id: str, model: str = "gpt-4o") -> FlashcardSet:
                 - Include context when needed
                 - Test understanding, not just memorization
                 - Extract information from both text and any diagrams/images in the PDF"""
+    else:
+        # Text file - include content directly
+        user_content = f"""Generate comprehensive flashcards from this lecture transcript/text:
+
+{text_content}
+
+Create flashcards that cover the key concepts, definitions, and important information from this text."""
+        system_content = """You are an expert at creating effective flashcards for spaced repetition learning.
+                Create flashcards that:
+                - Focus on atomic concepts (one concept per card)
+                - Use clear, concise questions
+                - Avoid yes/no questions
+                - Include context when needed
+                - Test understanding, not just memorization
+                - Extract key information from the lecture transcript"""
+    
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": system_content
             },
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "file",
-                        "file": {
-                            "file_id": file_id
-                        }
-                    },
-                    {
-                        "type": "text",
-                        "text": "Generate comprehensive flashcards from this document. Include information from any diagrams, charts, or images."
-                    }
-                ]
+                "content": user_content
             }
         ],
         response_format={
@@ -170,7 +225,7 @@ Issues to address:
     return FlashcardSet.model_validate_json(response.choices[0].message.content)
 
 
-def analyze_knowledge_gaps(session, file_id: str, model: str = "gpt-4o") -> KnowledgeGaps:
+def analyze_knowledge_gaps(session, file_id: str | None = None, text_content: str | None = None, model: str = "gpt-4o") -> KnowledgeGaps:
     """Use AI to analyze ratings and identify knowledge gaps."""
     from config import client
     from openai.lib._pydantic import to_strict_json_schema
@@ -224,8 +279,11 @@ Provide actionable recommendations with clear reasoning."""
     return KnowledgeGaps.model_validate_json(response.choices[0].message.content)
 
 
-def generate_gap_filling_cards(gaps: KnowledgeGaps, file_id: str, model: str = "gpt-4o") -> list[Flashcard]:
-    """Generate new flashcards specifically for identified gaps."""
+def generate_gap_filling_cards(gaps: KnowledgeGaps, file_id: str | None = None, text_content: str | None = None, model: str = "gpt-4o") -> list[Flashcard]:
+    """
+    Generate new flashcards specifically for identified gaps.
+    Must provide exactly one of file_id or text_content.
+    """
     from config import client
     from openai.lib._pydantic import to_strict_json_schema
     import logging
@@ -233,6 +291,9 @@ def generate_gap_filling_cards(gaps: KnowledgeGaps, file_id: str, model: str = "
     if not gaps.critical_gaps and not gaps.weak_areas:
         logging.info("No gaps identified, skipping card generation")
         return []
+    
+    if (file_id is None) == (text_content is None):
+        raise ValueError("Must provide exactly one of file_id or text_content")
     
     # Build prompt for specific gap-filling cards
     gap_summary = "\n".join([
@@ -245,24 +306,17 @@ def generate_gap_filling_cards(gaps: KnowledgeGaps, file_id: str, model: str = "
         ])
     
     print("Generating gap-filling flashcards...")
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
+    
+    # Build user content based on input type
+    if file_id:
+        user_content = [
             {
-                "role": "system",
-                "content": """You are an expert at creating targeted flashcards to help students 
-                fill specific knowledge gaps. Create focused cards that address the identified gaps."""
+                "type": "file",
+                "file": {"file_id": file_id}
             },
             {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "file",
-                        "file": {"file_id": file_id}
-                    },
-                    {
-                        "type": "text",
-                        "text": f"""Generate flashcards that specifically address these knowledge gaps:
+                "type": "text",
+                "text": f"""Generate flashcards that specifically address these knowledge gaps:
 
 {gap_summary}
 
@@ -274,8 +328,36 @@ Create focused flashcards that:
 - Are designed to scaffold learning (build up from basics)
 
 Generate approximately 5-8 flashcards tailored to these gaps."""
-                    }
-                ]
+            }
+        ]
+    else:
+        user_content = f"""Generate flashcards that specifically address these knowledge gaps from the original lecture transcript:
+
+{gap_summary}
+
+Original lecture transcript:
+{text_content}
+
+Create focused flashcards that:
+- Address the exact gaps identified
+- Use simpler language if student struggled
+- Provide step-by-step breakdowns for complex concepts
+- Include examples where helpful
+- Are designed to scaffold learning (build up from basics)
+
+Generate approximately 5-8 flashcards tailored to these gaps."""
+    
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {
+                "role": "system",
+                "content": """You are an expert at creating targeted flashcards to help students 
+                fill specific knowledge gaps. Create focused cards that address the identified gaps."""
+            },
+            {
+                "role": "user",
+                "content": user_content
             }
         ],
         response_format={

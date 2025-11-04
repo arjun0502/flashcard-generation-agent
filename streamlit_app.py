@@ -15,7 +15,7 @@ from models import FlashcardSet, StudySession, StudyRating, KnowledgeGaps, Adapt
 
 # Import functions from modular files
 from openai_client import (
-    upload_pdf,
+    prepare_input,
     generate_flashcards,
     critique_flashcards,
     revise_flashcards,
@@ -37,6 +37,8 @@ st.set_page_config(
 # Initialize session state
 if "file_id" not in st.session_state:
     st.session_state.file_id = None
+if "text_content" not in st.session_state:
+    st.session_state.text_content = None
 if "flashcards" not in st.session_state:
     st.session_state.flashcards = None
 if "study_session" not in st.session_state:
@@ -122,17 +124,25 @@ def main():
     
     # Tab 1: Upload & Generate
     with tab1:
-        st.header("Upload PDF and Generate Flashcards")
+        st.header("Upload File and Generate Flashcards")
         
         uploaded_file = st.file_uploader(
-            "Upload a PDF file",
-            type=["pdf"],
-            help="Upload your lecture notes, slides, or study materials"
+            "Upload a PDF or text file",
+            type=["pdf", "txt", "text"],
+            help="Upload your lecture notes, slides, transcripts, or study materials (PDF or text files)"
         )
         
         if uploaded_file is not None:
+            # Determine file extension
+            file_ext = Path(uploaded_file.name).suffix.lower()
+            
             # Save uploaded file temporarily
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            if file_ext == '.pdf':
+                suffix = ".pdf"
+            else:
+                suffix = ".txt"
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
                 tmp_file.write(uploaded_file.read())
                 tmp_path = tmp_file.name
             
@@ -146,14 +156,19 @@ def main():
             if generate_button:
                 with st.spinner("Generating flashcards..."):
                     try:
-                        # Upload PDF
-                        progress_bar = st.progress(0, text="Uploading PDF...")
-                        file_id = upload_pdf(tmp_path)
+                        # Prepare input (upload PDF or read text file)
+                        progress_bar = st.progress(0, text="Processing file...")
+                        file_id, text_content = prepare_input(tmp_path)
                         st.session_state.file_id = file_id
-                        progress_bar.progress(20, text="PDF uploaded. Generating flashcards...")
+                        st.session_state.text_content = text_content
+                        
+                        if file_id:
+                            progress_bar.progress(20, text="File uploaded. Generating flashcards...")
+                        else:
+                            progress_bar.progress(20, text="Text file read. Generating flashcards...")
                         
                         # Generate flashcards
-                        flashcards = generate_flashcards(file_id, st.session_state.model)
+                        flashcards = generate_flashcards(file_id=file_id, text_content=text_content, model=st.session_state.model)
                         progress_bar.progress(60, text="Flashcards generated. Critiquing...")
                         
                         # Critique and revise loop
@@ -339,15 +354,16 @@ def main():
             session = st.session_state.study_session
             
             if st.button("🔍 Analyze Knowledge Gaps", type="primary"):
-                if not st.session_state.file_id:
-                    st.error("File ID not found. Please regenerate flashcards.")
+                if not st.session_state.file_id and not st.session_state.text_content:
+                    st.error("File not found. Please regenerate flashcards.")
                 else:
                     with st.spinner("Analyzing knowledge gaps..."):
                         try:
                             gaps = analyze_knowledge_gaps(
                                 session,
-                                st.session_state.file_id,
-                                st.session_state.model
+                                file_id=st.session_state.file_id,
+                                text_content=st.session_state.text_content,
+                                model=st.session_state.model
                             )
                             st.session_state.knowledge_gaps = gaps
                             st.rerun()
@@ -396,8 +412,8 @@ def main():
                 st.info("💡 Based on your study session performance, the adaptive deck will remove cards you've mastered (rated 1) and add new targeted flashcards to fill your knowledge gaps.")
                 
                 if st.button("✨ Generate Adaptive Deck", type="primary"):
-                    if not st.session_state.file_id:
-                        st.error("File ID not found. Please regenerate flashcards.")
+                    if not st.session_state.file_id and not st.session_state.text_content:
+                        st.error("File not found. Please regenerate flashcards.")
                     else:
                         with st.spinner("Generating adaptive deck..."):
                             try:
@@ -406,8 +422,9 @@ def main():
                                     original,
                                     session,
                                     gaps,
-                                    st.session_state.file_id,
-                                    st.session_state.model
+                                    file_id=st.session_state.file_id,
+                                    text_content=st.session_state.text_content,
+                                    model=st.session_state.model
                                 )
                                 st.session_state.adaptive_update = update
                                 st.session_state.flashcards = update.final_flashcards

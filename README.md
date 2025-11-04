@@ -4,7 +4,7 @@ The Flashcard Generation Agent automatically generates flashcards from lecture m
 
 ## User Workflow
 
-1. **Provide Lecture Materials**: The user provide a PDF of your lecture notes, slides, or study materials
+1. **Provide Lecture Materials**: The user provides a PDF or text file containing lecture notes, slides, transcripts, or study materials
 2. **Automatic Flashcard Generation**: The agent analyzes the lecture materials and automatically generates flashcards covering key concepts
 3. **Quality Improvement**: The agent critiques the flashcards based on pedagogical principles for effective learning and then revises them accordingly
 4. **Optional Personalization**: The user optionally engages in an interactive study session and, as part of this study session, they will rate the difficulty of each flashcard. Based on the user ratings, the agent identifies what the user knows well, areas needing improvement, and critical knowledge gaps. It then adapts the deck by removing cards the user mastered and adding targeted flashcards to fill the user's knowledge gaps
@@ -16,10 +16,14 @@ The Flashcard Generation Agent automatically generates flashcards from lecture m
 ### OpenAI API Integration
 
 The agent is built on a series of OpenAI API calls that handle different aspects of flashcard generation, quality 
-improvement, and personalization. OpenAI API supports PDF file inputs if you use models with vision capabilities such as 
-`gpt-4o`, `gpt-4o-mini`, or `o1`. 
+improvement, and personalization. The system supports both PDF and text file inputs:
 
-- **Flashcard Generation**: Initial flashcard creation from the PDF content
+- **PDF Files**: Uploaded to OpenAI's Files API for processing with vision-capable models (`gpt-4o`, `gpt-4o-mini`, or `o1`). This allows the agent to extract information from both text and diagrams/images in PDFs.
+- **Text Files**: Read directly and included in the API call as text content. Perfect for lecture transcripts, plain text notes, or any `.txt` files.
+
+The core API operations include:
+
+- **Flashcard Generation**: Initial flashcard creation from the document content (PDF or text)
 - **Critique**: Evaluation of flashcard quality against pedagogical principles for long-term learning (atomicity, clarity, appropriate difficulty, avoiding yes/no questions, ensuring context)
 - **Revision**: Improvement of flashcards based on pedagogical feedback
 - **Knowledge Gap Analysis**: Analysis of study session ratings to identify learning gaps and generate targeted gap-filling cards
@@ -63,7 +67,7 @@ flashcard-generation-agent/
 ├── main.py              # CLI application entry point - orchestrates workflow, command-line argument parsing
 ├── streamlit_app.py     # Web application entry point - Streamlit-based interactive web interface
 ├── models.py            # Pydantic models for flashcard data structures (Flashcard, FlashcardSet, Critique, StudySession, KnowledgeGaps, etc.)
-├── openai_client.py     # OpenAI API interactions - PDF upload, flashcard generation, critique, knowledge gap analysis
+├── openai_client.py     # OpenAI API interactions - file upload/reading (PDF/text), flashcard generation, critique, knowledge gap analysis
 ├── study_session.py     # Interactive study session and adaptive learning functionality
 ├── anki_exporter.py     # Anki deck export functionality (.apkg generation and text format export)
 ├── config.py            # Configuration constants - OpenAI client, genanki model/deck IDs, logging setup
@@ -114,9 +118,13 @@ export OPENAI_API_KEY='your-api-key-here'
 $env:OPENAI_API_KEY="your-api-key-here"
 ```
 
-### 5. Add your PDF file
+### 5. Add your lecture materials
 
-Place your PDF file in the project directory (e.g., `lecture_notes.pdf`)
+Place your PDF or text file in the project directory (e.g., `lecture_notes.pdf` or `transcript.txt`)
+
+Supported file formats:
+- PDF files (`.pdf`) - Supports text and images/diagrams
+- Text files (`.txt`, `.text`) - Plain text lecture transcripts or notes
 
 ## Running Agent on CLI
 
@@ -125,30 +133,37 @@ The command-line interface provides a terminal-based workflow for generating fla
 ### Commands
 
 ```bash
-# Basic usage
+# Basic usage with PDF
 python main.py lecture_notes.pdf
+
+# Basic usage with text file
+python main.py transcript.txt
 
 # With custom deck name
 python main.py lecture_notes.pdf --deck "Biology 101 - Cell Structure"
+python main.py transcript.txt --deck "CS 229 - Machine Learning"
 
 # Use a cheaper/faster model
 python main.py lecture_notes.pdf --model gpt-4o-mini
+python main.py transcript.txt --model gpt-4o-mini
 
 # Customize number of iterations
 python main.py lecture_notes.pdf --iterations 3
+python main.py transcript.txt --iterations 3
 
 # Interactive study session with adaptive learning
 python main.py lecture_notes.pdf --study-session
+python main.py transcript.txt --study-session
 ```
 
 ### Command Line Options
 
-- `pdf_file` - Path to the PDF file (required)
+- `input_file` - Path to the PDF or text file (`.pdf`, `.txt`, `.text`) (required)
 - `--deck` - Name of the Anki deck (default: "Generated Flashcards")
 - `--model` - OpenAI model to use: gpt-4o, gpt-4o-mini, or o1 (default: gpt-4o)
 - `--iterations` - Maximum number of critique/revision iterations (default: 2)
 - `--verbose` - Enable verbose logging with all flashcards shown in log
-- `--keep-file` - Keep uploaded file on OpenAI servers (default: delete after use)
+- `--keep-file` - Keep uploaded file on OpenAI servers (only applies to PDFs; default: delete after use)
 - `--study-session` - Enable interactive study session with adaptive learning
 
 ### Output Files
@@ -176,7 +191,7 @@ This will start a local web server and automatically open your default web brows
 
 The web app provides:
 
-- **Upload & Generate Tab**: Upload PDF files with drag-and-drop, visualize generation progress
+- **Upload & Generate Tab**: Upload PDF or text files with drag-and-drop, visualize generation progress
 - **Review Tab**: Browse and search through generated flashcards
 - **Study Tab**: Interactive study session where you can type your answers and rate difficulty
 - **Analysis Tab**: View knowledge gap analysis and generate adaptive decks
@@ -198,12 +213,19 @@ Configure the following in the sidebar:
 
 ## Cost Estimation
 
-Typical costs per PDF (using GPT-4o):
+Typical costs per document (using GPT-4o):
+
+**PDF Files:**
 - Small PDF (10 pages): ~$0.05-0.15
 - Medium PDF (30 pages): ~$0.15-0.40
 - Large PDF (100 pages): ~$0.50-1.50
+- Note: PDFs with many images cost more due to vision processing
 
-Note: PDFs with many images cost more due to vision processing.
+**Text Files:**
+- Small text file (1,000 words): ~$0.01-0.03
+- Medium text file (5,000 words): ~$0.03-0.10
+- Large text file (20,000 words): ~$0.10-0.30
+- Text files are generally more cost-effective as they don't require vision processing
 
 ## Interactive Study Session
 
@@ -229,7 +251,7 @@ The interactive study session allows users to rate flashcards during their study
 
 ### Starting a Study Session
 
-- **CLI**: Use the `--study-session` flag: `python main.py lecture_notes.pdf --study-session`
+- **CLI**: Use the `--study-session` flag: `python main.py lecture_notes.pdf --study-session` or `python main.py transcript.txt --study-session`
 - **Web App**: Navigate to the Study tab after generating flashcards and click "Start Study Session"
 
 ### Example Study Session Flow (CLI)
