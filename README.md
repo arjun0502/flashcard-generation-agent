@@ -54,13 +54,14 @@ Key implementation details:
 
 The model uses a simple two-field template (Question/Answer) with a horizontal rule separator in the answer template.
 
-### Modular Codebase
+### Codebase Structure
 
 The codebase follows a modular design:
 
 ```
 flashcard-generation-agent/
-├── main.py              # Main application entry point - orchestrates workflow, CLI handling
+├── main.py              # CLI application entry point - orchestrates workflow, command-line argument parsing
+├── streamlit_app.py     # Web application entry point - Streamlit-based interactive web interface
 ├── models.py            # Pydantic models for flashcard data structures (Flashcard, FlashcardSet, Critique, StudySession, KnowledgeGaps, etc.)
 ├── openai_client.py     # OpenAI API interactions - PDF upload, flashcard generation, critique, knowledge gap analysis
 ├── study_session.py     # Interactive study session and adaptive learning functionality
@@ -71,7 +72,8 @@ flashcard-generation-agent/
 ├── output.apkg          # Generated Anki deck (created on run)
 └── flashcards.txt       # Text format output (created on run)
 ```
-The main application (`main.py`) is the entry point for the agent and orchestrates the full workflow. All core functionality is implemented in other modular files listed above. 
+
+The application provides two interfaces: `main.py` for CLI usage and `streamlit_app.py` for web-based interaction. Both interfaces use the same modular backend functions, ensuring consistent functionality across interfaces. 
 
 ## Setup
 
@@ -116,9 +118,11 @@ $env:OPENAI_API_KEY="your-api-key-here"
 
 Place your PDF file in the project directory (e.g., `lecture_notes.pdf`)
 
-## How to Run Agent
+## Running Agent on CLI
 
-### Command Line Interface (CLI)
+The command-line interface provides a terminal-based workflow for generating flashcards.
+
+### Commands
 
 ```bash
 # Basic usage
@@ -156,14 +160,43 @@ After running, you'll get:
 - `logs/flashcard_generation_TIMESTAMP.log` - Detailed log of the generation process including critiques and revisions
 - `knowledge_gaps_report.txt` - Gap analysis report (only when using `--study-session`)
 
-### Import into Anki
+## Running Agent on Web App
+
+The web interface provides an interactive browser-based experience with visual feedback and easy navigation.
+
+### Starting the Web App
+
+```bash
+streamlit run streamlit_app.py
+```
+
+This will start a local web server and automatically open your default web browser to the application interface.
+
+### Features
+
+The web app provides:
+
+- **Upload & Generate Tab**: Upload PDF files with drag-and-drop, visualize generation progress
+- **Review Tab**: Browse and search through generated flashcards
+- **Study Tab**: Interactive study session where you can type your answers and rate difficulty
+- **Analysis Tab**: View knowledge gap analysis and generate adaptive decks
+- **Export Tab**: Download flashcards as Anki packages or text files
+
+### Settings
+
+Configure the following in the sidebar:
+
+- **OpenAI Model**: Choose between gpt-4o, gpt-4o-mini, or o1
+- **Max Critique/Revision Iterations**: Set the number of critique-revision cycles (1-5)
+
+## Importing into Anki
 
 1. Open Anki desktop application
 2. File → Import
 3. Select `output.apkg`
 4. Your flashcards will appear in the specified deck!
 
-### Cost Estimation
+## Cost Estimation
 
 Typical costs per PDF (using GPT-4o):
 - Small PDF (10 pages): ~$0.05-0.15
@@ -174,23 +207,32 @@ Note: PDFs with many images cost more due to vision processing.
 
 ## Interactive Study Session
 
-The interactive study session provides a command-line interface where users can rate flashcards during their study session and get personalized adaptive decks. When using `--study-session`, you can:
+The interactive study session allows users to rate flashcards during their study and get personalized adaptive decks. This feature is available in both the CLI and web app interfaces.
+
+### How It Works
 
 1. **Study Session**: Rate each flashcard on difficulty (1-5)
-   - The CLI displays flashcards one at a time with questions and answers
-   - Collects difficulty ratings (1-5 scale) from the user
-   - Packages the ratings into a `StudySession` object for analysis
+   - **CLI**: Flashcards are displayed one at a time in the terminal. Press Enter to reveal answers, then enter a difficulty rating.
+   - **Web App**: Use the Study tab to go through flashcards. Type your answer, reveal the correct answer, then rate difficulty using the numbered buttons.
+   - The system collects difficulty ratings (1-5 scale) and packages them into a `StudySession` object for analysis
+   - Rating scale: 1 = Already know well, 2 = Easy, 3 = Moderate, 4 = Difficult, 5 = Very difficult
 
 2. **Gap Analysis**: AI identifies what you know well, weak areas, and critical gaps
-   - When combined with knowledge gap analysis, this enables adaptive learning where the agent modifies the deck based on user performance
+   - Analyzes your performance patterns from the study session ratings
+   - Identifies strong areas, areas needing improvement, and critical knowledge gaps
    - Uses `analyze_knowledge_gaps()` from `openai_client.py` to analyze performance
 
 3. **Adaptive Deck**: 
    - Removes cards you've mastered (rated 1)
    - Adds targeted gap-filling cards for concepts you struggled with
-   - Creates personalized deck based on your knowledge level
+   - Creates a personalized deck based on your knowledge level
 
-### Example Study Session Flow
+### Starting a Study Session
+
+- **CLI**: Use the `--study-session` flag: `python main.py lecture_notes.pdf --study-session`
+- **Web App**: Navigate to the Study tab after generating flashcards and click "Start Study Session"
+
+### Example Study Session Flow (CLI)
 
 ```
 Would you like to start a study session? (y/n): y
