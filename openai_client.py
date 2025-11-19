@@ -92,14 +92,9 @@ def generate_flashcards(file_id: str | None = None, text_content: str | None = N
                 "text": "Generate comprehensive flashcards from this document. Include information from any diagrams, charts, or images."
             }
         ]
-        system_content = """You are an expert at creating effective flashcards for spaced repetition learning.
-                Create flashcards that:
-                - Focus on atomic concepts (one concept per card)
-                - Use clear, concise questions
-                - Avoid yes/no questions
-                - Include context when needed
-                - Test understanding, not just memorization
-                - Extract information from both text and any diagrams/images in the PDF"""
+        system_content = """You are an expert at creating flashcards for spaced repetition learning.
+
+Generate comprehensive flashcards from this document. Include information from any diagrams, charts, or images."""
     else:
         # Text file - include content directly
         user_content = f"""Generate comprehensive flashcards from this lecture transcript/text:
@@ -107,14 +102,9 @@ def generate_flashcards(file_id: str | None = None, text_content: str | None = N
 {text_content}
 
 Create flashcards that cover the key concepts, definitions, and important information from this text."""
-        system_content = """You are an expert at creating effective flashcards for spaced repetition learning.
-                Create flashcards that:
-                - Focus on atomic concepts (one concept per card)
-                - Use clear, concise questions
-                - Avoid yes/no questions
-                - Include context when needed
-                - Test understanding, not just memorization
-                - Extract key information from the lecture transcript"""
+        system_content = """You are an expert at creating flashcards for spaced repetition learning.
+
+Generate comprehensive flashcards from this lecture transcript/text. Create flashcards that cover the key concepts, definitions, and important information from this text."""
     
     response = client.chat.completions.create(
         model=model,
@@ -155,14 +145,17 @@ def critique_flashcards(flashcard_set: FlashcardSet, model: str = "gpt-4o") -> C
         messages=[
             {
                 "role": "system",
-                "content": """Evaluate flashcards against these pedagogical principles:
-                1. Atomicity: One concept per card
-                2. Clarity: Unambiguous questions and answers
-                3. Difficulty: Appropriate cognitive load
-                4. Avoid: Yes/no questions, overly broad questions
-                5. Context: Include necessary context for understanding
-                
-                Determine if the flashcards are acceptable or need revision."""
+                "content": """You are an expert educational evaluator specializing in flashcard quality assessment for long-term learning and spaced repetition.
+
+Evaluate these flashcards against four critical quality metrics:
+
+1. ATOMICITY: Each card should focus on ONE clear, atomic concept. Cards that combine multiple concepts or require multiple pieces of information should be split or simplified.
+
+2. CLARITY: Questions and answers must be unambiguous and precise. Avoid vague wording, ambiguous phrasing, or questions that could have multiple correct answers. Include necessary context for understanding.
+
+3. LONG-TERM RETENTION POTENTIAL (Active Recall): Cards should promote active recall and deep understanding rather than surface memorization. Prefer "why" and "how" questions over "what" questions. Avoid yes/no questions, simple fact recall, or questions that test only memorization. Cards should require the learner to actively construct knowledge.
+
+For each flashcard, identify specific issues related to these three metrics. Determine if the flashcards are acceptable or need revision."""
             },
             {
                 "role": "user",
@@ -196,7 +189,7 @@ def revise_flashcards(flashcard_set: FlashcardSet, critique: Critique, model: st
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert at refining flashcards based on pedagogical feedback."
+                "content": "You are an expert at refining flashcards based on pedagogical feedback. \n\nRevise the flashcards to address the feedback below. When making revisions, ensure each flashcard meets these three quality criteria: atomicity (one concept per card), clarity (unambiguous questions/answers), and long-term retention potential (active recall over memorization).\n\nFocus on addressing the specific feedback and issues identified."
             },
             {
                 "role": "user",
@@ -352,8 +345,17 @@ Generate approximately 5-8 flashcards tailored to these gaps."""
         messages=[
             {
                 "role": "system",
-                "content": """You are an expert at creating targeted flashcards to help students 
-                fill specific knowledge gaps. Create focused cards that address the identified gaps."""
+                "content": """You are an expert at creating targeted flashcards to help students fill specific knowledge gaps.
+
+Create flashcards that directly and effectively address the identified knowledge gaps. Each card should target a specific gap and help the student understand concepts they struggled with. While addressing gaps, ensure each card also meets these three quality criteria:
+
+1. ATOMICITY: Each card should focus on ONE clear, atomic concept. Break down complex gaps into simpler, focused cards.
+
+2. CLARITY: Use clear, unambiguous questions and answers. Since the student struggled with these concepts, provide necessary context.
+
+3. LONG-TERM RETENTION POTENTIAL: Design cards that promote active recall and deep understanding. Use "why" and "how" questions rather than simple fact recall.
+
+Create focused flashcards that effectively address the exact gaps identified while maintaining quality on these three metrics."""
             },
             {
                 "role": "user",

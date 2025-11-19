@@ -6,6 +6,7 @@ Orchestrates the workflow and handles command-line argument parsing.
 import os
 import argparse
 import logging
+import json
 from pathlib import Path
 from datetime import datetime
 
@@ -32,9 +33,17 @@ from study_session import (
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
+# Set up evaluation data directory
+EVAL_DATA_DIR = Path("evaluation_data")
+EVAL_DATA_DIR.mkdir(exist_ok=True)
+
 # Create log filename with timestamp
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = LOG_DIR / f"flashcard_generation_{timestamp}.log"
+
+# Create timestamped evaluation data directory
+eval_data_subdir = EVAL_DATA_DIR / timestamp
+eval_data_subdir.mkdir(exist_ok=True)
 
 # Configure logging
 logging.basicConfig(
@@ -80,10 +89,40 @@ def create_flashcards(
     try:
         # Prepare input (upload PDF or read text file)
         file_id, text_content = prepare_input(file_path)
+        
+        # Save evaluation metadata
+        metadata = {
+            "source_file": file_path,
+            "deck_name": deck_name,
+            "model": model,
+            "max_iterations": max_iterations,
+            "timestamp": timestamp,
+            "file_id": file_id if file_id else None,
+            "has_text_content": text_content is not None,
+            "study_session_enabled": enable_study_session
+        }
+        metadata_path = eval_data_subdir / "evaluation_metadata.json"
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
+        logging.info(f"Saved evaluation metadata to {metadata_path}")
+        
+        if text_content:
+            # Save text content for evaluation
+            text_content_path = eval_data_subdir / "source_text.txt"
+            with open(text_content_path, "w", encoding="utf-8") as f:
+                f.write(text_content)
+            logging.info(f"Saved source text to {text_content_path}")
+        
         flashcards = generate_flashcards(file_id=file_id, text_content=text_content, model=model)
         
         print(f"✓ Generated {len(flashcards.flashcards)} flashcards\n")
         logging.info(f"Generated {len(flashcards.flashcards)} initial flashcards")
+        
+        # Save initial flashcards for evaluation
+        initial_flashcards_path = eval_data_subdir / "flashcards_initial.json"
+        with open(initial_flashcards_path, "w", encoding="utf-8") as f:
+            json.dump(flashcards.model_dump(), f, indent=2)
+        logging.info(f"Saved initial flashcards to {initial_flashcards_path}")
         
         # Log initial flashcards
         logging.debug("Initial flashcards:")
@@ -115,6 +154,12 @@ def create_flashcards(
             
             print()
         
+        # Save revised flashcards for evaluation
+        revised_flashcards_path = eval_data_subdir / "flashcards_revised.json"
+        with open(revised_flashcards_path, "w", encoding="utf-8") as f:
+            json.dump(flashcards.model_dump(), f, indent=2)
+        logging.info(f"Saved revised flashcards to {revised_flashcards_path}")
+        
         # Store original flashcards
         original_flashcards = flashcards
         
@@ -137,6 +182,7 @@ def create_flashcards(
             
             logging.info(f"Completed! Created {len(flashcards.flashcards)} flashcards")
             logging.info(f"Log file saved to: {log_file}")
+            print(f"✓ Evaluation data saved to: {eval_data_subdir}")
         else:
             # Study session mode - ask user
             print("\n" + "="*60)
@@ -147,14 +193,38 @@ def create_flashcards(
                 session = conduct_study_session(original_flashcards)
                 logging.info(f"Study session completed: {len(session.ratings)} ratings collected")
                 
+                # Save study session for evaluation
+                study_session_path = eval_data_subdir / "study_session.json"
+                with open(study_session_path, "w", encoding="utf-8") as f:
+                    json.dump(session.model_dump(), f, indent=2)
+                logging.info(f"Saved study session to {study_session_path}")
+                
                 # Analyze gaps
                 gaps = analyze_knowledge_gaps(session, file_id=file_id, text_content=text_content, model=model)
                 logging.info(f"Knowledge gaps analyzed: {len(gaps.weak_areas)} weak areas identified")
+                
+                # Save knowledge gaps for evaluation
+                knowledge_gaps_path = eval_data_subdir / "knowledge_gaps.json"
+                with open(knowledge_gaps_path, "w", encoding="utf-8") as f:
+                    json.dump(gaps.model_dump(), f, indent=2)
+                logging.info(f"Saved knowledge gaps to {knowledge_gaps_path}")
                 
                 # Adaptive update
                 adaptive_result = adaptive_update_flashcards(
                     original_flashcards, session, gaps, file_id, text_content, model
                 )
+                
+                # Save adapted flashcards for evaluation
+                adapted_flashcards_path = eval_data_subdir / "flashcards_adapted.json"
+                with open(adapted_flashcards_path, "w", encoding="utf-8") as f:
+                    json.dump(adaptive_result.final_flashcards.model_dump(), f, indent=2)
+                logging.info(f"Saved adapted flashcards to {adapted_flashcards_path}")
+                
+                # Save adaptive update for evaluation
+                adaptive_update_path = eval_data_subdir / "adaptive_update.json"
+                with open(adaptive_update_path, "w", encoding="utf-8") as f:
+                    json.dump(adaptive_result.model_dump(), f, indent=2)
+                logging.info(f"Saved adaptive update to {adaptive_update_path}")
                 
                 # Export adaptive deck
                 export_to_anki(
@@ -180,6 +250,7 @@ def create_flashcards(
                 
                 logging.info(f"Adaptive deck created: {len(adaptive_result.final_flashcards.flashcards)} cards")
                 logging.info(f"Log file saved to: {log_file}")
+                print(f"✓ Evaluation data saved to: {eval_data_subdir}")
                 
                 return adaptive_result.final_flashcards
             else:
@@ -235,8 +306,8 @@ Examples:
     parser.add_argument(
         "--iterations",
         type=int,
-        default=2,
-        help="Maximum number of critique/revision iterations (default: 2)"
+        default=1,
+        help="Maximum number of critique/revision iterations (default: 1)"
     )
     
     parser.add_argument(
