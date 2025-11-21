@@ -202,10 +202,8 @@ def main():
         
         # Deck selector
         if not st.session_state.flashcard_decks:
-            if st.session_state.generating_deck:
-                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-            else:
-                st.info("👆 Please generate flashcards first in the 'Generate' tab")
+            deck_name = st.session_state.generating_deck if st.session_state.generating_deck else "a deck"
+            st.info(f"🔄 Generating deck '{deck_name}'... Please wait.")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
             # Default to latest deck (last in dict, which maintains insertion order)
@@ -220,10 +218,8 @@ def main():
             
             current_deck = st.session_state.flashcard_decks.get(selected_study_deck)
             if not current_deck or not current_deck.get("flashcards"):
-                if st.session_state.generating_deck:
-                    st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-                else:
-                    st.info("👆 Please generate flashcards first in the 'Generate' tab")
+                deck_name = st.session_state.generating_deck if st.session_state.generating_deck else "a deck"
+                st.info(f"🔄 Generating deck '{deck_name}'... Please wait.")
             else:
                 flashcards = current_deck["flashcards"].flashcards
                 
@@ -365,10 +361,8 @@ def main():
     # Tab 3: Mastery
     with tab3:
         if not st.session_state.flashcard_decks:
-            if st.session_state.generating_deck:
-                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-            else:
-                st.info("👆 Please generate flashcards first in the 'Generate' tab")
+            deck_name = st.session_state.generating_deck if st.session_state.generating_deck else "a deck"
+            st.info(f"🔄 Generating deck '{deck_name}'... Please wait.")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
             # Default to latest deck (last in dict, which maintains insertion order)
@@ -383,10 +377,8 @@ def main():
             
             current_deck = st.session_state.flashcard_decks.get(selected_mastery_deck)
             if not current_deck:
-                if st.session_state.generating_deck:
-                    st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-                else:
-                    st.info("👆 Please generate flashcards first")
+                deck_name = st.session_state.generating_deck if st.session_state.generating_deck else "a deck"
+                st.info(f"🔄 Generating deck '{deck_name}'... Please wait.")
             else:
                 study_sessions = current_deck.get("study_sessions", [])
                 
@@ -471,10 +463,8 @@ def main():
         st.header("Export Flashcards")
         
         if not st.session_state.flashcard_decks:
-            if st.session_state.generating_deck:
-                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-            else:
-                st.info("👆 Please generate flashcards first")
+            deck_name = st.session_state.generating_deck if st.session_state.generating_deck else "a deck"
+            st.info(f"🔄 Generating deck '{deck_name}'... Please wait.")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
             # Default to latest deck (last in dict, which maintains insertion order)
@@ -489,10 +479,8 @@ def main():
             
             current_deck = st.session_state.flashcard_decks.get(selected_export_deck)
             if not current_deck or not current_deck.get("flashcards"):
-                if st.session_state.generating_deck:
-                    st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-                else:
-                    st.info("👆 Please generate flashcards first")
+                deck_name = st.session_state.generating_deck if st.session_state.generating_deck else "a deck"
+                st.info(f"🔄 Generating deck '{deck_name}'... Please wait.")
             else:
                 flashcards = current_deck["flashcards"]
                 
