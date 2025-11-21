@@ -48,7 +48,7 @@ if "show_answer" not in st.session_state:
 if "user_answers" not in st.session_state:
     st.session_state.user_answers = {}
 if "model" not in st.session_state:
-    st.session_state.model = "gpt-4o"
+    st.session_state.model = "gpt-4o-mini"
 
 
 def reset_study_session():
