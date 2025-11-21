@@ -82,55 +82,6 @@ def main():
         )
         # Fixed number of critique/revision iterations (not user-configurable)
         max_iterations = 1
-        
-        st.divider()
-        
-        st.header("📚 Your Decks")
-        if st.session_state.flashcard_decks:
-            deck_names = list(st.session_state.flashcard_decks.keys())
-            if st.session_state.selected_deck not in deck_names:
-                st.session_state.selected_deck = deck_names[0] if deck_names else None
-            
-            selected = st.selectbox(
-                "Select Deck",
-                deck_names,
-                index=deck_names.index(st.session_state.selected_deck) if st.session_state.selected_deck in deck_names else 0,
-                key="deck_selector"
-            )
-            st.session_state.selected_deck = selected
-            
-            # Show deck info
-            deck_data = st.session_state.flashcard_decks[selected]
-            if deck_data.get("flashcards"):
-                st.info(f"📊 {len(deck_data['flashcards'].flashcards)} cards")
-                if deck_data.get("study_sessions"):
-                    st.caption(f"📖 {len(deck_data['study_sessions'])} study sessions")
-        else:
-            st.info("No decks yet")
-            st.session_state.selected_deck = None
-        
-        st.divider()
-        
-        st.header("📊 Status")
-        current_deck = get_current_deck()
-        if current_deck and current_deck.get("flashcards"):
-            st.success(f"✓ {len(current_deck['flashcards'].flashcards)} flashcards in current deck")
-        else:
-            st.info("No flashcards yet")
-        
-        st.divider()
-        
-        if st.button("🔄 Reset Session", use_container_width=True):
-            # Clean up file IDs
-            for deck_name, deck_data in st.session_state.flashcard_decks.items():
-                if deck_data.get("file_id"):
-                    try:
-                        cleanup_file(deck_data["file_id"])
-                    except:
-                        pass
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
     
     # Main title
     st.title("📚 SmartFlash")
@@ -175,9 +126,6 @@ def main():
             
             generate_button = st.button("🚀 Generate Flashcards", type="primary", use_container_width=True)
             
-            # Show existing deck info if any
-            if st.session_state.flashcard_decks:
-                st.info(f"You have {len(st.session_state.flashcard_decks)} deck(s). Select a deck in the sidebar to study.")
             
             if generate_button:
                 # Generate deck name if not provided
@@ -231,8 +179,7 @@ def main():
                             
                             progress_bar.empty()
                             
-                            st.success(f"✓ Generated {len(current_flashcards.flashcards)} flashcards for '{deck_name}'!")
-                            st.info(f"Generated {len(current_flashcards.flashcards)} flashcards! To review them, go to the \"Study\" tab.")
+                            st.success(f"Generated deck with {len(current_flashcards.flashcards)} flashcards! To review them, go to the \"Study\" tab.")
                             st.rerun()
                             
                         except Exception as e:
@@ -251,18 +198,17 @@ def main():
             st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
-            if not st.session_state.selected_deck or st.session_state.selected_deck not in deck_names:
-                st.session_state.selected_deck = deck_names[0]
+            # Default to latest deck (last in dict, which maintains insertion order)
+            latest_deck = deck_names[-1] if deck_names else None
             
             selected_study_deck = st.selectbox(
                 "Select Deck to Study",
                 deck_names,
-                index=deck_names.index(st.session_state.selected_deck) if st.session_state.selected_deck in deck_names else 0,
+                index=deck_names.index(latest_deck) if latest_deck else 0,
                 key="study_deck_selector"
             )
-            st.session_state.selected_deck = selected_study_deck
             
-            current_deck = get_current_deck()
+            current_deck = st.session_state.flashcard_decks.get(selected_study_deck)
             if not current_deck or not current_deck.get("flashcards"):
                 st.info("👆 Please generate flashcards first in the 'Generate' tab")
             else:
@@ -412,18 +358,17 @@ def main():
             st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
-            if not st.session_state.selected_deck or st.session_state.selected_deck not in deck_names:
-                st.session_state.selected_deck = deck_names[0]
+            # Default to latest deck (last in dict, which maintains insertion order)
+            latest_deck = deck_names[-1] if deck_names else None
             
             selected_mastery_deck = st.selectbox(
                 "Select Deck to View Mastery",
                 deck_names,
-                index=deck_names.index(st.session_state.selected_deck) if st.session_state.selected_deck in deck_names else 0,
+                index=deck_names.index(latest_deck) if latest_deck else 0,
                 key="mastery_deck_selector"
             )
-            st.session_state.selected_deck = selected_mastery_deck
             
-            current_deck = get_current_deck()
+            current_deck = st.session_state.flashcard_decks.get(selected_mastery_deck)
             if not current_deck:
                 st.info("👆 Please generate flashcards first")
             else:
@@ -513,18 +458,17 @@ def main():
             st.info("👆 Please generate flashcards first")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
-            if not st.session_state.selected_deck or st.session_state.selected_deck not in deck_names:
-                st.session_state.selected_deck = deck_names[0]
+            # Default to latest deck (last in dict, which maintains insertion order)
+            latest_deck = deck_names[-1] if deck_names else None
             
             selected_export_deck = st.selectbox(
                 "Select Deck to Export",
                 deck_names,
-                index=deck_names.index(st.session_state.selected_deck) if st.session_state.selected_deck in deck_names else 0,
+                index=deck_names.index(latest_deck) if latest_deck else 0,
                 key="export_deck_selector"
             )
-            st.session_state.selected_deck = selected_export_deck
             
-            current_deck = get_current_deck()
+            current_deck = st.session_state.flashcard_decks.get(selected_export_deck)
             if not current_deck or not current_deck.get("flashcards"):
                 st.info("👆 Please generate flashcards first")
             else:
