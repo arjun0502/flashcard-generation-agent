@@ -49,6 +49,8 @@ if "user_answers" not in st.session_state:
     st.session_state.user_answers = {}
 if "model" not in st.session_state:
     st.session_state.model = "gpt-4o-mini"
+if "generating_deck" not in st.session_state:
+    st.session_state.generating_deck = None  # Store deck name being generated
 
 
 def reset_study_session():
@@ -134,6 +136,9 @@ def main():
                 if deck_name in st.session_state.flashcard_decks:
                     st.warning(f"Deck '{deck_name}' already exists. Please choose a different name.")
                 else:
+                    # Set generating status
+                    st.session_state.generating_deck = deck_name
+                    
                     with st.spinner("Generating flashcards..."):
                         try:
                             # Prepare input (upload PDF or read text file)
@@ -174,9 +179,13 @@ def main():
                             
                             progress_bar.empty()
                             
+                            # Clear generating status
+                            st.session_state.generating_deck = None
+                            
                             st.rerun()
                             
                         except Exception as e:
+                            st.session_state.generating_deck = None
                             st.error(f"Error: {str(e)}")
                         finally:
                             # Clean up temp file
@@ -186,6 +195,10 @@ def main():
     # Tab 2: Study
     with tab2:
         st.header("Interactive Study Session")
+        
+        # Show generation status if generating
+        if st.session_state.generating_deck:
+            st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
         
         # Deck selector
         if not st.session_state.flashcard_decks:
@@ -345,6 +358,10 @@ def main():
     
     # Tab 3: Mastery
     with tab3:
+        # Show generation status if generating
+        if st.session_state.generating_deck:
+            st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+        
         if not st.session_state.flashcard_decks:
             st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
@@ -445,6 +462,10 @@ def main():
     with tab4:
         st.header("Export Flashcards")
         
+        # Show generation status if generating
+        if st.session_state.generating_deck:
+            st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+        
         if not st.session_state.flashcard_decks:
             st.info("👆 Please generate flashcards first")
         else:
@@ -464,8 +485,6 @@ def main():
                 st.info("👆 Please generate flashcards first")
             else:
                 flashcards = current_deck["flashcards"]
-                
-                st.info(f"Ready to export {len(flashcards.flashcards)} flashcards from '{selected_export_deck}'")
                 
                 col1, col2 = st.columns(2)
                 
