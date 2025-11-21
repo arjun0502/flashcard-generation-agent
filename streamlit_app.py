@@ -305,7 +305,7 @@ def main():
                             # Automatically analyze gaps and generate adaptive deck
                             if current_deck.get("file_id") or current_deck.get("text_content"):
                                 try:
-                                    with st.spinner("Analyzing knowledge gaps and updating deck..."):
+                                    with st.spinner("Analyzing your mastery and updating deck..."):
                                         # 1. Analyze gaps
                                         gaps = analyze_knowledge_gaps(
                                             session,
@@ -331,7 +331,7 @@ def main():
                                         # Reset study session state
                                         reset_study_session()
                                         
-                                        st.success("✓ Study session saved! Deck automatically updated with new cards.")
+                                        st.success("✓ Study session saved! Deck automatically updated based on your mastery. See the 'Mastery' tab for a breakdown of your knowledge gaps and the revisions to the deck.")
                                         st.rerun()
                                 except Exception as e:
                                     st.error(f"Error: {str(e)}")
@@ -342,12 +342,9 @@ def main():
                             reset_study_session()
                             st.rerun()
                         
-                        st.info("See a breakdown of your mastery in the next tab.")
     
     # Tab 3: Mastery
     with tab3:
-        st.header("Knowledge Gap Analysis")
-        
         if not st.session_state.flashcard_decks:
             st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
@@ -470,12 +467,6 @@ def main():
                 
                 st.info(f"Ready to export {len(flashcards.flashcards)} flashcards from '{selected_export_deck}'")
                 
-                anki_deck_name = st.text_input(
-                    "Anki Deck Name",
-                    value=selected_export_deck,
-                    help="Name for the Anki deck"
-                )
-                
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -483,7 +474,7 @@ def main():
                         with st.spinner("Creating Anki package..."):
                             try:
                                 output_file = "output.apkg"
-                                export_to_anki(flashcards, anki_deck_name, output_file)
+                                export_to_anki(flashcards, selected_export_deck, output_file)
                                 
                                 with open(output_file, "rb") as f:
                                     st.download_button(
