@@ -117,10 +117,10 @@ def main():
     
     # Tab 1: Generate
     with tab1:
-        st.header("Upload File and Generate Flashcards")
+        st.header("Generate Flashcards")
         
         uploaded_file = st.file_uploader(
-            "Upload your lecture notes, slides, transcripts, or study materials (PDF or text files)",
+            "Upload your lecture slides or transcripts below (PDF or text files)",
             type=["pdf", "txt", "text"]
         )
         
@@ -143,7 +143,7 @@ def main():
                 generate_button = st.button("🚀 Generate Flashcards", type="primary", use_container_width=True)
             with col2:
                 if st.session_state.flashcards:
-                    st.success(f"✓ Already have {len(st.session_state.flashcards.flashcards)} flashcards")
+                    st.success(f"Generated {len(st.session_state.flashcards.flashcards)} flashcards! To review them, go to the \"Study\" tab.")
             
             if generate_button:
                 with st.spinner("Generating flashcards..."):
@@ -201,12 +201,6 @@ def main():
             if len(flashcards) == 0:
                 st.warning("No flashcards to study!")
             else:
-                # Start study session button
-                if st.session_state.current_flashcard_index == 0 and len(st.session_state.ratings) == 0:
-                    if st.button("▶️ Start Study Session", type="primary", use_container_width=True):
-                        reset_study_session()
-                        st.rerun()
-                
                 # Study session in progress
                 if st.session_state.current_flashcard_index < len(flashcards):
                     current_idx = st.session_state.current_flashcard_index
