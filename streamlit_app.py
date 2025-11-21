@@ -168,7 +168,7 @@ def main():
                             
                             progress_bar.empty()
                             
-                            st.success(f"Generated deck with {len(current_flashcards.flashcards)} flashcards! To review them, go to the \"Study\" tab.")
+                            st.success(f"Generated deck with {len(current_flashcards.flashcards)} flashcards. You can review the deck in the \"Study\" tab.")
                             st.rerun()
                             
                         except Exception as e:
