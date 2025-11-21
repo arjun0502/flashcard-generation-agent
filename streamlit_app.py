@@ -115,6 +115,12 @@ def main():
             
             generate_button = st.button("🚀 Generate Flashcards", type="primary", use_container_width=True)
             
+            # Show confirmation if deck was just created
+            if st.session_state.flashcard_decks:
+                latest_deck_name = list(st.session_state.flashcard_decks.keys())[-1]
+                latest_deck = st.session_state.flashcard_decks[latest_deck_name]
+                if latest_deck.get("flashcards"):
+                    st.success(f"Generated deck '{latest_deck_name}' with {len(latest_deck['flashcards'].flashcards)} flashcards. You can review the deck in the \"Study\" tab.")
             
             if generate_button:
                 # Generate deck name if not provided
@@ -168,7 +174,6 @@ def main():
                             
                             progress_bar.empty()
                             
-                            st.success(f"Generated deck with {len(current_flashcards.flashcards)} flashcards. You can review the deck in the \"Study\" tab.")
                             st.rerun()
                             
                         except Exception as e:
