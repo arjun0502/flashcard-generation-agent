@@ -81,13 +81,8 @@ def main():
             help="Model to use for flashcard generation and analysis",
             key="model"
         )
-        max_iterations = st.slider(
-            "Max Critique/Revision Iterations",
-            min_value=1,
-            max_value=5,
-            value=1,
-            help="Maximum number of critique-revision cycles"
-        )
+        # Fixed number of critique/revision iterations (not user-configurable)
+        max_iterations = 1
         
         st.divider()
         
@@ -110,26 +105,23 @@ def main():
             st.rerun()
     
     # Main title
-    st.title("📚 Flashcard Generation Agent")
-    st.markdown("Automatically generate, critique, and personalize flashcards from your lecture materials")
-    
+    st.title("📚 SmartFlash")
+    st.markdown("An AI-powered platform that automatically generates flaschard decks, helps you study them, identifies your knowledge gaps, and continuously updates your deck as you learn.") 
     # Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "📤 Upload & Generate",
-        "📚 Review",
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📤 Generate",
         "📖 Study",
-        "📊 Analysis",
+        "📊 Mastery",
         "💾 Export"
     ])
     
-    # Tab 1: Upload & Generate
+    # Tab 1: Generate
     with tab1:
         st.header("Upload File and Generate Flashcards")
         
         uploaded_file = st.file_uploader(
-            "Upload a PDF or text file",
-            type=["pdf", "txt", "text"],
-            help="Upload your lecture notes, slides, transcripts, or study materials (PDF or text files)"
+            "Upload your lecture notes, slides, transcripts, or study materials (PDF or text files)",
+            type=["pdf", "txt", "text"]
         )
         
         if uploaded_file is not None:
@@ -187,6 +179,7 @@ def main():
                         progress_bar.empty()
                         
                         st.success(f"✓ Generated {len(current_flashcards.flashcards)} flashcards!")
+                        st.info(f"Generated {len(current_flashcards.flashcards)} flashcards. Review the flashcards in the \"Study\" tab.")
                         st.rerun()
                         
                     except Exception as e:
@@ -196,49 +189,12 @@ def main():
                         if os.path.exists(tmp_path):
                             os.unlink(tmp_path)
         
-        # Display current flashcards summary
-        if st.session_state.flashcards:
-            st.divider()
-            st.subheader("Generated Flashcards Summary")
-            st.info(f"Total flashcards: {len(st.session_state.flashcards.flashcards)}")
-    
-    # Tab 2: Review
+    # Tab 2: Study
     with tab2:
-        st.header("Review Flashcards")
-        
-        if not st.session_state.flashcards:
-            st.info("👆 Please generate flashcards first in the 'Upload & Generate' tab")
-        else:
-            # Search functionality
-            search_term = st.text_input("🔍 Search flashcards", placeholder="Search questions or answers...")
-            
-            # Filter flashcards
-            filtered_flashcards = st.session_state.flashcards.flashcards
-            if search_term:
-                filtered_flashcards = [
-                    fc for fc in filtered_flashcards
-                    if search_term.lower() in fc.question.lower() or search_term.lower() in fc.answer.lower()
-                ]
-            
-            st.info(f"Showing {len(filtered_flashcards)} of {len(st.session_state.flashcards.flashcards)} flashcards")
-            
-            # Display flashcards
-            for idx, flashcard in enumerate(filtered_flashcards):
-                with st.expander(f"Card {idx + 1}: {flashcard.question[:60]}..."):
-                    col1, col2 = st.columns([1, 1])
-                    with col1:
-                        st.markdown("**Question:**")
-                        st.write(flashcard.question)
-                    with col2:
-                        st.markdown("**Answer:**")
-                        st.write(flashcard.answer)
-    
-    # Tab 3: Study
-    with tab3:
         st.header("Interactive Study Session")
         
         if not st.session_state.flashcards:
-            st.info("👆 Please generate flashcards first in the 'Upload & Generate' tab")
+            st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
             flashcards = st.session_state.flashcards.flashcards
             
@@ -338,14 +294,14 @@ def main():
                             ratings=st.session_state.ratings,
                             timestamp=datetime.now().isoformat()
                         )
-                        st.success("✓ Study session saved! Go to the Analysis tab to analyze knowledge gaps.")
+                        st.success("✓ Study session saved! Go to the Mastery tab to analyze knowledge gaps.")
                     
                     if st.button("🔄 Restart Study Session"):
                         reset_study_session()
                         st.rerun()
     
-    # Tab 4: Analysis
-    with tab4:
+    # Tab 3: Mastery
+    with tab3:
         st.header("Knowledge Gap Analysis")
         
         if not st.session_state.study_session:
@@ -460,8 +416,8 @@ def main():
                                 st.write(f"**Q:** {card.question}")
                                 st.caption(f"**A:** {card.answer}")
     
-    # Tab 5: Export
-    with tab5:
+    # Tab 4: Export
+    with tab4:
         st.header("Export Flashcards")
         
         if not st.session_state.flashcards:
