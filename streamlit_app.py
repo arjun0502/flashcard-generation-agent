@@ -69,19 +69,8 @@ def get_current_deck():
 def main():
     """Main Streamlit application."""
     
-    # Sidebar
-    with st.sidebar:
-        st.header("⚙️ Settings")
-        
-        model = st.selectbox(
-            "OpenAI Model",
-            ["gpt-4o", "gpt-4o-mini", "o1"],
-            index=0,
-            help="Model to use for flashcard generation and analysis",
-            key="model"
-        )
-        # Fixed number of critique/revision iterations (not user-configurable)
-        max_iterations = 1
+    # Fixed number of critique/revision iterations (not user-configurable)
+    max_iterations = 1
     
     # Main title
     st.title("📚 SmartFlash")
