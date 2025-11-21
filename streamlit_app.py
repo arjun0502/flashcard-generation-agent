@@ -115,10 +115,14 @@ def main():
                 help="Give your flashcard deck a name to organize it"
             )
             
+            # Show generation status if generating
+            if st.session_state.generating_deck:
+                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... This may take a minute.")
+            
             generate_button = st.button("🚀 Generate Flashcards", type="primary", use_container_width=True)
             
             # Show confirmation if deck was just created
-            if st.session_state.flashcard_decks:
+            if st.session_state.flashcard_decks and not st.session_state.generating_deck:
                 latest_deck_name = list(st.session_state.flashcard_decks.keys())[-1]
                 latest_deck = st.session_state.flashcard_decks[latest_deck_name]
                 if latest_deck.get("flashcards"):
@@ -196,13 +200,12 @@ def main():
     with tab2:
         st.header("Interactive Study Session")
         
-        # Show generation status if generating
-        if st.session_state.generating_deck:
-            st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-        
         # Deck selector
         if not st.session_state.flashcard_decks:
-            st.info("👆 Please generate flashcards first in the 'Generate' tab")
+            if st.session_state.generating_deck:
+                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+            else:
+                st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
             # Default to latest deck (last in dict, which maintains insertion order)
@@ -217,7 +220,10 @@ def main():
             
             current_deck = st.session_state.flashcard_decks.get(selected_study_deck)
             if not current_deck or not current_deck.get("flashcards"):
-                st.info("👆 Please generate flashcards first in the 'Generate' tab")
+                if st.session_state.generating_deck:
+                    st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+                else:
+                    st.info("👆 Please generate flashcards first in the 'Generate' tab")
             else:
                 flashcards = current_deck["flashcards"].flashcards
                 
@@ -358,12 +364,11 @@ def main():
     
     # Tab 3: Mastery
     with tab3:
-        # Show generation status if generating
-        if st.session_state.generating_deck:
-            st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-        
         if not st.session_state.flashcard_decks:
-            st.info("👆 Please generate flashcards first in the 'Generate' tab")
+            if st.session_state.generating_deck:
+                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+            else:
+                st.info("👆 Please generate flashcards first in the 'Generate' tab")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
             # Default to latest deck (last in dict, which maintains insertion order)
@@ -378,7 +383,10 @@ def main():
             
             current_deck = st.session_state.flashcard_decks.get(selected_mastery_deck)
             if not current_deck:
-                st.info("👆 Please generate flashcards first")
+                if st.session_state.generating_deck:
+                    st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+                else:
+                    st.info("👆 Please generate flashcards first")
             else:
                 study_sessions = current_deck.get("study_sessions", [])
                 
@@ -462,12 +470,11 @@ def main():
     with tab4:
         st.header("Export Flashcards")
         
-        # Show generation status if generating
-        if st.session_state.generating_deck:
-            st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
-        
         if not st.session_state.flashcard_decks:
-            st.info("👆 Please generate flashcards first")
+            if st.session_state.generating_deck:
+                st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+            else:
+                st.info("👆 Please generate flashcards first")
         else:
             deck_names = list(st.session_state.flashcard_decks.keys())
             # Default to latest deck (last in dict, which maintains insertion order)
@@ -482,7 +489,10 @@ def main():
             
             current_deck = st.session_state.flashcard_decks.get(selected_export_deck)
             if not current_deck or not current_deck.get("flashcards"):
-                st.info("👆 Please generate flashcards first")
+                if st.session_state.generating_deck:
+                    st.info(f"🔄 Generating deck '{st.session_state.generating_deck}'... Please wait.")
+                else:
+                    st.info("👆 Please generate flashcards first")
             else:
                 flashcards = current_deck["flashcards"]
                 
