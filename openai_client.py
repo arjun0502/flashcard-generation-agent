@@ -147,15 +147,19 @@ def critique_flashcards(flashcard_set: FlashcardSet, model: str = "gpt-4o") -> C
                 "role": "system",
                 "content": """You are an expert educational evaluator specializing in flashcard quality assessment for long-term learning and spaced repetition.
 
-Evaluate these flashcards against four critical quality metrics:
+OVERARCHING GOAL: These flashcards are designed for long-term understanding and spaced repetition of lecture material. They should help students master important concepts through active recall and deep understanding, not just surface memorization.
+
+Evaluate these flashcards against four atomic, independent quality metrics. Each metric is separate and non-overlapping:
 
 1. ATOMICITY: Each card should focus on ONE clear, atomic concept. Cards that combine multiple concepts or require multiple pieces of information should be split or simplified.
 
-2. CLARITY: Questions and answers must be unambiguous and precise. Avoid vague wording, ambiguous phrasing, or questions that could have multiple correct answers. Include necessary context for understanding.
+2. CLARITY: Questions and answers must be unambiguous, precise, and complete. Avoid vague wording, ambiguous phrasing, or questions that could have multiple correct answers. Include necessary context for understanding. The answer should fully address the question without being excessively long.
 
-3. LONG-TERM RETENTION POTENTIAL (Active Recall): Cards should promote active recall and deep understanding rather than surface memorization. Prefer "why" and "how" questions over "what" questions. Avoid yes/no questions, simple fact recall, or questions that test only memorization. Cards should require the learner to actively construct knowledge.
+3. LEARNING VALUE: Cards should promote active recall and deep understanding rather than surface memorization. Prefer "why" and "how" questions over "what" questions. Avoid yes/no questions, simple fact recall, or questions that test only memorization. Cards should require the learner to actively construct knowledge.
 
-For each flashcard, identify specific issues related to these three metrics. Determine if the flashcards are acceptable or need revision."""
+4. ACCURACY: The information in the flashcard must be factually correct and free from errors. Verify that all facts, definitions, and explanations are accurate.
+
+For each flashcard, identify specific issues related to these four metrics. Determine if the flashcards are acceptable or need revision."""
             },
             {
                 "role": "user",
@@ -189,7 +193,7 @@ def revise_flashcards(flashcard_set: FlashcardSet, critique: Critique, model: st
         messages=[
             {
                 "role": "system",
-                "content": "You are an expert at refining flashcards based on pedagogical feedback. \n\nRevise the flashcards to address the feedback below. When making revisions, ensure each flashcard meets these three quality criteria: atomicity (one concept per card), clarity (unambiguous questions/answers), and long-term retention potential (active recall over memorization).\n\nFocus on addressing the specific feedback and issues identified."
+                "content": "You are an expert at refining flashcards based on pedagogical feedback. \n\nOVERARCHING GOAL: These flashcards are designed for long-term understanding and spaced repetition of lecture material. They should help students master important concepts through active recall and deep understanding, not just surface memorization.\n\nRevise the flashcards to address the feedback below. When making revisions, ensure each flashcard meets these four quality criteria:\n1. ATOMICITY: One clear concept per card\n2. CLARITY: Unambiguous, precise, and complete questions/answers\n3. LEARNING VALUE: Promotes active recall and deep understanding\n4. ACCURACY: Factually correct and free from errors\n\nFocus on addressing the specific feedback and issues identified."
             },
             {
                 "role": "user",
@@ -347,15 +351,19 @@ Generate approximately 5-8 flashcards tailored to these gaps."""
                 "role": "system",
                 "content": """You are an expert at creating targeted flashcards to help students fill specific knowledge gaps.
 
-Create flashcards that directly and effectively address the identified knowledge gaps. Each card should target a specific gap and help the student understand concepts they struggled with. While addressing gaps, ensure each card also meets these three quality criteria:
+OVERARCHING GOAL: These flashcards are designed for long-term understanding and spaced repetition of lecture material. They should help students master important concepts through active recall and deep understanding, not just surface memorization.
+
+Create flashcards that directly and effectively address the identified knowledge gaps. Each card should target a specific gap and help the student understand concepts they struggled with. While addressing gaps, ensure each card also meets these four quality criteria:
 
 1. ATOMICITY: Each card should focus on ONE clear, atomic concept. Break down complex gaps into simpler, focused cards.
 
-2. CLARITY: Use clear, unambiguous questions and answers. Since the student struggled with these concepts, provide necessary context.
+2. CLARITY: Use clear, unambiguous, and complete questions and answers. Since the student struggled with these concepts, provide necessary context. The answer should fully address the question.
 
-3. LONG-TERM RETENTION POTENTIAL: Design cards that promote active recall and deep understanding. Use "why" and "how" questions rather than simple fact recall.
+3. LEARNING VALUE: Design cards that promote active recall and deep understanding. Use "why" and "how" questions rather than simple fact recall.
 
-Create focused flashcards that effectively address the exact gaps identified while maintaining quality on these three metrics."""
+4. ACCURACY: The information in the flashcard must be factually correct and free from errors. Verify that all facts, definitions, and explanations are accurate.
+
+Create focused flashcards that effectively address the exact gaps identified while maintaining quality on these four metrics."""
             },
             {
                 "role": "user",

@@ -151,16 +151,11 @@ Examples:
         adapted_flashcards = load_json_file(adapted_path, FlashcardSet)
         if adapted_flashcards:
             print("Evaluating Stage 3: After Adaptation...")
+            print("Note: Stage 3 focuses on personalization, not quality improvement.")
+            print("Evaluating personalization effectiveness only (not quality metrics)...")
             
-            adapted_eval = evaluate_flashcard_set(
-                adapted_flashcards,
-                file_id=file_id,
-                text_content=text_content,
-                stage_name="After Adaptation",
-                model=args.model
-            )
-            
-            # Also evaluate adaptation effectiveness
+            # Stage 3: Only evaluate personalization (not quality metrics)
+            # Load required data for adaptation evaluation
             study_session_path = eval_data_dir / "study_session.json"
             knowledge_gaps_path = eval_data_dir / "knowledge_gaps.json"
             adaptive_update_path = eval_data_dir / "adaptive_update.json"
@@ -171,8 +166,11 @@ Examples:
             adaptive_update = load_json_file(adaptive_update_path, AdaptiveUpdate)
             original_revised = load_json_file(revised_path, FlashcardSet)
             
+            # Don't evaluate quality metrics for adapted stage - it's about personalization
+            adapted_eval = None
+            
             if study_session and knowledge_gaps and adaptive_update and original_revised:
-                print("Evaluating Adaptation Effectiveness...")
+                print("Evaluating Adaptation Effectiveness (Personalization)...")
                 adaptation_eval = evaluate_adaptation(
                     original_revised,
                     adaptive_update,
@@ -184,8 +182,11 @@ Examples:
                 )
             else:
                 print("Warning: Missing data for adaptation effectiveness evaluation")
+                adaptation_eval = None
         else:
             print(f"Warning: {adapted_path} not found, skipping adapted evaluation")
+            adapted_eval = None
+            adaptation_eval = None
     
     # Save evaluation results
     output_dir = Path(args.output_dir)
@@ -200,7 +201,6 @@ Examples:
         with open(eval_output_dir / "evaluation_initial.json", "w", encoding="utf-8") as f:
             json.dump(initial_eval.model_dump(), f, indent=2)
         print(f"\nStage 1 Results:")
-        print(f"  Overall Score: {initial_eval.overall_deck_score or 0.0:.2f}/10")
         if initial_eval.average_scores:
             for criterion, score in initial_eval.average_scores.items():
                 print(f"  {criterion.replace('_', ' ').title()}: {score:.2f}/10")
@@ -209,44 +209,23 @@ Examples:
         with open(eval_output_dir / "evaluation_revised.json", "w", encoding="utf-8") as f:
             json.dump(revised_eval.model_dump(), f, indent=2)
         print(f"\nStage 2 Results:")
-        print(f"  Overall Score: {revised_eval.overall_deck_score or 0.0:.2f}/10")
         if revised_eval.average_scores:
             for criterion, score in revised_eval.average_scores.items():
                 print(f"  {criterion.replace('_', ' ').title()}: {score:.2f}/10")
+        if revised_eval.overall_deck_score is not None:
+            print(f"  Overall Deck Score: {revised_eval.overall_deck_score:.2f}/10")
     
-    if adapted_eval:
-        with open(eval_output_dir / "evaluation_adapted.json", "w", encoding="utf-8") as f:
-            json.dump(adapted_eval.model_dump(), f, indent=2)
-        
-        # Calculate overall score including gap coverage for stage 3
-        # Average of atomicity, clarity, long_term_retention_potential, and gap_coverage
-        if adaptation_eval and adapted_eval.average_scores:
-            gap_coverage = adaptation_eval.average_gap_coverage
-            # Average of all four metrics: atomicity, clarity, long_term_retention_potential, gap_coverage
-            metric_scores = [
-                adapted_eval.average_scores["atomicity"],
-                adapted_eval.average_scores["clarity"],
-                adapted_eval.average_scores["long_term_retention_potential"],
-                gap_coverage
-            ]
-            overall_score = sum(metric_scores) / len(metric_scores)
-        else:
-            # Fallback to deck score if adaptation eval not available
-            overall_score = adapted_eval.overall_deck_score or 0.0
-        
-        print(f"\nStage 3 Results:")
-        print(f"  Overall Score: {overall_score:.2f}/10 (average of atomicity, clarity, long-term retention, and gap coverage)")
-        if adapted_eval.average_scores:
-            for criterion, score in adapted_eval.average_scores.items():
-                print(f"  {criterion.replace('_', ' ').title()}: {score:.2f}/10")
-    
+    # Stage 3: Only report personalization metrics (not quality metrics)
     if adaptation_eval:
         with open(eval_output_dir / "evaluation_adaptation.json", "w", encoding="utf-8") as f:
             json.dump(adaptation_eval.model_dump(), f, indent=2)
-        print(f"\nAdaptation Effectiveness:")
-        print(f"  Overall: {adaptation_eval.overall_adaptation_effectiveness}/10")
-        print(f"  Gap Coverage: {adaptation_eval.average_gap_coverage:.2f}/10")
-        print(f"  Removal Appropriateness: {adaptation_eval.average_removal_appropriateness:.2f}/10")
+        
+        print(f"\nStage 3 Results (Personalization):")
+        print(f"  Overall Personalization Score: {adaptation_eval.overall_personalization:.2f}/10")
+        print(f"  Gap-Filling Effectiveness: {adaptation_eval.average_gap_personalization:.2f}/10 (how well new cards address student gaps)")
+        print(f"  Removal Appropriateness: {adaptation_eval.average_removal_personalization:.2f}/10 (whether removals were correct)")
+        print(f"\n  Note: Stage 3 evaluates ONLY personalization (gap-filling and removal appropriateness).")
+        print(f"        Quality metrics (atomicity, clarity, learning_value, accuracy) are NOT evaluated for this stage.")
     
     print(f"\n✓ Evaluation complete! Results saved to: {eval_output_dir}")
     

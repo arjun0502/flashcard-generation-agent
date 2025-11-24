@@ -7,6 +7,7 @@ study sessions, and knowledge gap analysis.
 import streamlit as st
 import tempfile
 import os
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -484,16 +485,23 @@ def main():
                     if st.button("📦 Export to Anki (.apkg)", type="primary", use_container_width=True):
                         with st.spinner("Creating Anki package..."):
                             try:
-                                output_file = "output.apkg"
+                                # Use unique filename to avoid conflicts with concurrent users
+                                unique_id = str(uuid.uuid4())[:8]
+                                safe_deck_name = "".join(c for c in selected_export_deck if c.isalnum() or c in (' ', '-', '_')).strip()
+                                output_file = f"{safe_deck_name}_{unique_id}.apkg"
                                 export_to_anki(flashcards, selected_export_deck, output_file)
                                 
                                 with open(output_file, "rb") as f:
+                                    file_data = f.read()
                                     st.download_button(
                                         label="⬇️ Download Anki Package",
-                                        data=f.read(),
+                                        data=file_data,
                                         file_name=output_file,
                                         mime="application/octet-stream"
                                     )
+                                # Clean up temp file after download
+                                if os.path.exists(output_file):
+                                    os.unlink(output_file)
                                 st.success("✓ Anki package created!")
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
@@ -502,16 +510,23 @@ def main():
                     if st.button("📄 Export to Text File", use_container_width=True):
                         with st.spinner("Creating text file..."):
                             try:
-                                output_file = "flashcards.txt"
+                                # Use unique filename to avoid conflicts with concurrent users
+                                unique_id = str(uuid.uuid4())[:8]
+                                safe_deck_name = "".join(c for c in selected_export_deck if c.isalnum() or c in (' ', '-', '_')).strip()
+                                output_file = f"{safe_deck_name}_{unique_id}.txt"
                                 save_flashcards_text(flashcards, output_file)
                                 
                                 with open(output_file, "r", encoding="utf-8") as f:
+                                    file_data = f.read()
                                     st.download_button(
                                         label="⬇️ Download Text File",
-                                        data=f.read(),
+                                        data=file_data,
                                         file_name=output_file,
                                         mime="text/plain"
                                     )
+                                # Clean up temp file after download
+                                if os.path.exists(output_file):
+                                    os.unlink(output_file)
                                 st.success("✓ Text file created!")
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")

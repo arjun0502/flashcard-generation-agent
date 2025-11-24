@@ -57,8 +57,9 @@ class AdaptiveUpdate(BaseModel):
 class FlashcardEvaluation(BaseModel):
     """Evaluation of a single flashcard."""
     atomicity: int  # 1-10: One clear concept per card
-    clarity: int  # 1-10: Unambiguous questions and answers
-    long_term_retention_potential: int  # 1-10: Promotes active recall and deep understanding
+    clarity: int  # 1-10: Unambiguous, precise, and complete questions and answers
+    learning_value: int  # 1-10: Promotes active recall and deep understanding
+    accuracy: int  # 1-10: Factually correct and free from errors
     feedback: str  # Detailed feedback per criterion
 
 
@@ -73,7 +74,7 @@ class GapCardEvaluation(BaseModel):
     """Evaluation of how well new cards address a specific gap."""
     gap_description: str  # The identified gap
     addressing_cards: list[int]  # List of new card indices that address this gap
-    gap_coverage_score: int  # 1-10: How well new cards address this specific gap
+    personalization_score: int  # 1-10: How well new cards address this specific gap (personalization effectiveness)
     relevance_feedback: str  # Detailed explanation
 
 
@@ -82,7 +83,7 @@ class RemovalEvaluation(BaseModel):
     removed_card_index: int  # Index of removed card
     removed_card_question: str  # Question text
     user_rating: int  # User's difficulty rating (1-5)
-    removal_appropriateness: int  # 1-10: Whether removal was correct
+    personalization_score: int  # 1-10: Whether removal was appropriate (personalization effectiveness)
     removal_feedback: str  # Explanation
 
 
@@ -90,6 +91,7 @@ class AdaptationEvaluation(BaseModel):
     """Evaluation of the adaptation stage."""
     gap_evaluations: list[GapCardEvaluation]  # One per identified gap
     removal_evaluations: list[RemovalEvaluation]  # One per removed card
-    average_gap_coverage: float  # Average gap coverage score
-    average_removal_appropriateness: float  # Average removal correctness
-    overall_adaptation_effectiveness: int  # 1-10: Overall score
+    average_gap_personalization: float  # Average personalization score for gap-filling cards
+    average_removal_personalization: float  # Average personalization score for removals
+    overall_personalization: float  # Overall personalization effectiveness (weighted average)
+    overall_adaptation_effectiveness: int  # 1-10: Overall score (deprecated, use overall_personalization)
